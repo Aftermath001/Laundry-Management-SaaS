@@ -714,26 +714,13 @@ export async function businessRoutes(app: FastifyInstance) {
         });
       }
 
-      // Prevent deleting the only branch of a business.
+      // Prevent deleting any branch marked as the main branch.
 
-      const { count, error: countError } = await request.supabase
-        .from("branches")
-        .select("id", { count: "exact", head: true })
-        .eq("business_id", params.data.businessId);
-
-      if (countError) {
-        request.log.error(countError);
-
-        return reply.code(500).send({
-          success: false,
-          message: "Unable to verify business branches.",
-        });
-      }
-
-      if (branch.is_main && (count ?? 0) <= 1) {
+      if (branch.is_main) {
         return reply.code(409).send({
           success: false,
-          message: "The only main branch cannot be deleted. Create another branch first.",
+          message:
+            "The main branch cannot be deleted. Assign another branch as main first.",
         });
       }
 
@@ -747,6 +734,14 @@ export async function businessRoutes(app: FastifyInstance) {
 
       if (deleteError) {
         request.log.error(deleteError);
+
+        if (deleteError.code === "23514") {
+          return reply.code(409).send({
+            success: false,
+            message:
+              "The main branch cannot be deleted. Assign another branch as main first.",
+          });
+        }
 
         if (deleteError.code === "42501") {
           return reply.code(403).send({
