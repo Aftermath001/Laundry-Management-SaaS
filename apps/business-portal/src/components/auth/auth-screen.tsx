@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, Droplets, ShieldCheck, WashingMachine } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,29 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const copy = authCopy[mode];
+
+  useEffect(() => {
+    if (mode !== "onboarding") return;
+
+    let active = true;
+    getSupabaseBrowserClient().auth.getSession().then(({ data, error: sessionError }) => {
+      if (!active) return;
+      if (sessionError || !data.session) {
+        void navigate({ to: "/login" });
+        return;
+      }
+      const metadata = data.session.user.user_metadata as {
+        full_name?: string;
+        business_name?: string;
+      };
+      setFullName(metadata.full_name ?? "");
+      setBusinessName(metadata.business_name ?? "");
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [mode, navigate]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
