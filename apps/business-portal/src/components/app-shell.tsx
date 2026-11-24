@@ -1,8 +1,7 @@
-import { useState, type ReactNode } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { useEffect, useState, type ReactNode } from "react";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   Bell,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleHelp,
@@ -20,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
 const navigation: { label: string; to: "/" | "/orders" | "/branches" | "/employees"; icon: LucideIcon; count?: string }[] = [
@@ -29,10 +29,85 @@ const navigation: { label: string; to: "/" | "/orders" | "/branches" | "/employe
   { label: "Team", to: "/employees", icon: UsersRound },
 ] as const;
 
+type AuthStatus = "checking" | "authenticated" | "unauthenticated" | "error";
+
 export function AppShell({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (state) => state.location.pathname });
+  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [authStatus, setAuthStatus] = useState<AuthStatus>("checking");
+  const [accountLabel, setAccountLabel] = useState("Account");
+  const [authError, setAuthError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    let client;
+
+    try {
+      client = getSupabaseBrowserClient();
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Supabase authentication is not configured.");
+      setAuthStatus("error");
+      return;
+    }
+
+    client.auth.getSession().then(({ data, error }) => {
+      if (!active) return;
+      if (error) {
+        setAuthError(error.message);
+        setAuthStatus("error");
+        return;
+      }
+      if (!data.session) {
+        setAuthStatus("unauthenticated");
+        void navigate({ to: "/login" });
+        return;
+      }
+      const metadata = data.session.user.user_metadata as { full_name?: string };
+      setAccountLabel(metadata.full_name || data.session.user.email || "Account");
+      setAuthStatus("authenticated");
+    });
+
+    const { data: authListener } = client.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      if (!session) {
+        setAuthStatus("unauthenticated");
+        void navigate({ to: "/login" });
+        return;
+      }
+      const metadata = session.user.user_metadata as { full_name?: string };
+      setAccountLabel(metadata.full_name || session.user.email || "Account");
+      setAuthStatus("authenticated");
+    });
+
+    return () => {
+      active = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, [navigate]);
+
+  async function signOut() {
+    await getSupabaseBrowserClient().auth.signOut();
+    await navigate({ to: "/login" });
+  }
+
+  if (authStatus !== "authenticated") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-6 text-center">
+        <div className="max-w-md">
+          {authStatus === "error" ? (
+            <>
+              <p className="text-sm font-semibold text-foreground">Authentication configuration required</p>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">{authError}</p>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">Checking your LaundryFlow session…</p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -42,7 +117,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           collapsed ? "w-[5.25rem]" : "w-64",
         )}
       >
-        <SidebarContent collapsed={collapsed} path={path} />
+        <SidebarContent collapsed={collapsed} path={path} onSignOut={signOut} />
         <Button
           variant="ghost"
           size="icon"
@@ -60,7 +135,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="flex justify-end p-3">
               <Button variant="ghost" size="icon" aria-label="Close navigation" onClick={() => setMobileOpen(false)} className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"><X /></Button>
             </div>
-            <SidebarContent path={path} onNavigate={() => setMobileOpen(false)} />
+            <SidebarContent path={path} onNavigate={() => setMobileOpen(false)} onSignOut={signOut} />
           </aside>
         </div>
       )}
@@ -69,7 +144,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-30 flex h-[4.25rem] items-center gap-3 border-b border-border bg-card/95 px-4 backdrop-blur sm:px-7">
           <Button variant="ghost" size="icon" aria-label="Open navigation" onClick={() => setMobileOpen(true)} className="-ml-2 lg:hidden"><Menu /></Button>
           <div className="hidden items-center gap-2 text-sm text-muted-foreground md:flex">
-            <span>Acme Laundry Co.</span><span className="text-border">/</span><span className="font-medium text-foreground">{navigation.find((item) => item.to === path)?.label ?? "Overview"}</span>
+            <span>LaundryFlow</span><span className="text-border">/</span><span className="font-medium text-foreground">{navigation.find((item) => item.to === path)?.label ?? "Overview"}</span>
           </div>
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <label className="relative hidden w-56 lg:block">
@@ -79,10 +154,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             </label>
             <Button variant="ghost" size="icon" aria-label="Notifications" className="relative text-muted-foreground"><Bell /><span className="absolute right-2 top-2 size-1.5 rounded-full bg-primary ring-2 ring-card" /></Button>
             <span className="hidden h-7 w-px bg-border sm:block" />
-            <Button variant="ghost" className="h-9 gap-2 px-1.5 sm:px-2.5">
-              <span className="grid size-8 place-items-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">AM</span>
-              <span className="hidden text-left sm:block"><span className="block text-xs font-semibold leading-4">Alex Morgan</span><span className="block text-[11px] leading-4 text-muted-foreground">Business owner</span></span>
-              <ChevronDown className="hidden size-3.5 text-muted-foreground sm:block" />
+            <Button variant="ghost" onClick={() => void signOut()} className="h-9 gap-2 px-1.5 sm:px-2.5" aria-label="Sign out">
+              <span className="grid size-8 place-items-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">{accountLabel.slice(0, 2).toUpperCase()}</span>
+              <span className="hidden text-left sm:block"><span className="block max-w-36 truncate text-xs font-semibold leading-4">{accountLabel}</span><span className="block text-[11px] leading-4 text-muted-foreground">Sign out</span></span>
+              <LogOut className="size-3.5 text-muted-foreground" />
             </Button>
           </div>
         </header>
@@ -100,7 +175,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 }
 
-function SidebarContent({ collapsed = false, path, onNavigate }: { collapsed?: boolean; path: string; onNavigate?: () => void }) {
+function SidebarContent({
+  collapsed = false,
+  path,
+  onNavigate,
+  onSignOut,
+}: {
+  collapsed?: boolean;
+  path: string;
+  onNavigate?: () => void;
+  onSignOut: () => void | Promise<void>;
+}) {
   return (
     <>
       <Link to="/" onClick={onNavigate} className={cn("flex h-[4.25rem] items-center gap-3 border-b border-sidebar-border px-5", collapsed && "justify-center px-2")}>
@@ -128,7 +213,7 @@ function SidebarContent({ collapsed = false, path, onNavigate }: { collapsed?: b
       </div>
       <div className="space-y-1 border-t border-sidebar-border p-3">
         <button type="button" className={cn("flex h-9 w-full items-center gap-3 rounded-md px-3 text-xs text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-foreground", collapsed && "justify-center px-0")}><CircleHelp className="size-4" />{!collapsed && <span>Help & support</span>}</button>
-        <Link to="/login" className={cn("flex h-9 items-center gap-3 rounded-md px-3 text-xs text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-foreground", collapsed && "justify-center px-0")}><LogOut className="size-4" />{!collapsed && <span>Sign in screen</span>}</Link>
+        <button type="button" onClick={() => void onSignOut()} title="Sign out" className={cn("flex h-9 w-full items-center gap-3 rounded-md px-3 text-xs text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-foreground", collapsed && "justify-center px-0")}><LogOut className="size-4" />{!collapsed && <span>Sign out</span>}</button>
       </div>
     </>
   );
