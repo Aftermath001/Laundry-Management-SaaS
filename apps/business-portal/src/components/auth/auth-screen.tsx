@@ -83,7 +83,7 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
           email: email.trim(),
           password,
           options: {
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: `${window.location.origin}/onboarding`,
             data: {
               full_name: fullName.trim(),
               business_name: businessName.trim(),
