@@ -42,7 +42,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    let client;
+    let client: ReturnType<typeof getSupabaseBrowserClient>;
 
     try {
       client = getSupabaseBrowserClient();
