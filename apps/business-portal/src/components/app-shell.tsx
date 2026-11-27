@@ -123,7 +123,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     await navigate({ to: "/login" });
   }
 
-  const roleNavigation = navigation.filter((item) => role === "owner" || role === "admin" ? true : role === "manager" ? item.to === "/" || item.to === "/orders" : role === "staff" ? item.to === "/orders" : false);\n\n  useEffect(() => {\n    if (authStatus !== "authenticated" || role === "unassigned" || role === "platform_admin") return;\n    if (!roleNavigation.some((item) => item.to === path)) void navigate({ to: role === "staff" ? "/orders" : "/" });\n  }, [authStatus, role, path, navigate]);\n\n  if (authStatus !== "authenticated") {
+  const roleNavigation = navigation.filter((item) => role === "owner" || role === "admin" ? true : role === "manager" ? item.to === "/" || item.to === "/orders" : role === "staff" ? item.to === "/orders" : false);
+
+  useEffect(() => {
+    if (authStatus !== "authenticated" || role === "unassigned" || role === "platform_admin") return;
+    if (!roleNavigation.some((item) => item.to === path)) void navigate({ to: role === "staff" ? "/orders" : "/" });
+  }, [authStatus, role, path, navigate]);
+\n  if (authStatus !== "authenticated") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-6 text-center">
         <div className="max-w-md">
