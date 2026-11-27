@@ -44,15 +44,23 @@ export function DashboardPage() {
   const [userName, setUserName] = useState("there");
   const [greeting, setGreeting] = useState("Hello");
   const [today, setToday] = useState("");
+  const [dashboard, setDashboard] = useState<{order_counts:{total:number;active:number;pending:number;processing:number;ready:number};revenue:{today:number;month:number};branches:{active:number;total:number};recent_orders:Array<{id:string;order_number:string;customer_name:string;status:string;total_amount:number|string;due_at:string|null}>;recent_payments:Array<{id:string;amount:number|string;method:string;customer_name:string|null;paid_at:string}>} | null>(null);
+  const [dashboardError, setDashboardError] = useState("");
 
   useEffect(() => {
     const now = new Date();
     const hour = now.getHours();
     setGreeting(hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening");
     setToday(now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" }));
-    apiClient.get<{ user: { full_name: string | null } }>("/v1/auth/me")
-      .then((identity) => setUserName(identity.user.full_name?.trim() || "there"))
-      .catch(() => setUserName("there"));
+    apiClient.get<{ user: { full_name: string | null }; authorization: { memberships: Array<{ business_id:string;role:string }> } }>("/v1/auth/me")
+      .then(async (identity) => {
+        setUserName(identity.user.full_name?.trim() || "there");
+        const membership=identity.authorization.memberships.find((item)=>item.role==="admin"||item.role==="owner");
+        if(!membership) return;
+        const response=await apiClient.get<{dashboard:NonNullable<typeof dashboard>}>(`/v1/businesses/${membership.business_id}/dashboard`);
+        setDashboard(response.dashboard);
+      })
+      .catch((error) => setDashboardError(error instanceof Error ? error.message : "Dashboard data unavailable."));
   }, []);
 
   const activeOrders = DEMO_ORDERS.filter((order) => order.status !== "Completed").length;
@@ -83,31 +91,31 @@ export function DashboardPage() {
       <div className="mb-6 grid grid-cols-1 gap-3 min-[540px]:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Total revenue"
-          value="KES 1.86M"
+          value={dashboard ? formatKES(dashboard.revenue.month) : dashboardError ? "Unavailable" : "Loading…"}
           change="12.8%"
           note="vs. last month"
           icon={Wallet}
         />
         <MetricCard
           label="Total orders"
-          value="1,284"
+          value={dashboard ? dashboard.order_counts.total.toLocaleString() : dashboardError ? "Unavailable" : "Loading…"}
           change="8.2%"
           note="vs. last month"
           icon={Shirt}
         />
         <MetricCard
           label="Pending orders"
-          value="48"
+          value={dashboard ? dashboard.order_counts.active.toLocaleString() : dashboardError ? "Unavailable" : "Loading…"}
           change="4.6%"
           positive={false}
-          note="18 due today"
+          note={dashboard ? `${dashboard.order_counts.ready} ready for collection` : "Live order data"}
           icon={Activity}
         />
         <MetricCard
           label="Active branches"
-          value="4"
+          value={dashboard ? dashboard.branches.active.toLocaleString() : dashboardError ? "Unavailable" : "Loading…"}
           change="1 new"
-          note="Across Nairobi"
+          note={dashboard ? `${dashboard.branches.total} registered branches` : "Live branch data"}
           icon={Store}
         />
       </div>
@@ -116,9 +124,9 @@ export function DashboardPage() {
         <section className="rounded-lg border border-border bg-card p-4 shadow-[0_1px_2px_0_var(--color-border)] sm:p-5">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <SectionTitle title="Revenue overview" />
+              <SectionTitle title="Revenue collected today" />
               <p className="-mt-3 text-xs text-muted-foreground">
-                Daily performance across all branches
+                Revenue collected today
               </p>
             </div>
             <select
@@ -132,7 +140,7 @@ export function DashboardPage() {
             </select>
           </div>
           <div className="mb-1 flex items-baseline gap-2">
-            <span className="text-2xl font-semibold tracking-tight">KES 486,200</span>
+            <span className="text-2xl font-semibold tracking-tight">{dashboard ? formatKES(dashboard.revenue.today) : dashboardError ? "Unavailable" : "Loading…"}</span>
             <span className="inline-flex items-center text-[11px] font-semibold text-success">
               <ArrowUpRight className="size-3" />
               14.2%
@@ -197,12 +205,12 @@ export function DashboardPage() {
               </button>
             }
           />
-          <p className="-mt-2 text-xs text-muted-foreground">Orders by status today</p>
+          <p className="-mt-2 text-xs text-muted-foreground">Live orders by status</p>
           <div className="mt-6 space-y-5">
             {[
-              { label: "Processing", value: 28, total: 48, color: "bg-primary" },
-              { label: "Ready for collection", value: 12, total: 48, color: "bg-success" },
-              { label: "Out for delivery", value: 8, total: 48, color: "bg-chart-3" },
+              { label: "Processing", value: dashboard?.order_counts.processing ?? 0, total: Math.max(dashboard?.order_counts.active ?? 0,1), color: "bg-primary" },
+              { label: "Ready for collection", value: dashboard?.order_counts.ready ?? 0, total: Math.max(dashboard?.order_counts.active ?? 0,1), color: "bg-success" },
+              { label: "Pending", value: dashboard?.order_counts.pending ?? 0, total: Math.max(dashboard?.order_counts.active ?? 0,1), color: "bg-chart-3" },
             ].map((item) => (
               <div key={item.label}>
                 <div className="mb-2 flex justify-between text-xs">
@@ -221,11 +229,11 @@ export function DashboardPage() {
           <div className="mt-7 grid grid-cols-2 gap-3 border-t border-border pt-4">
             <div>
               <p className="text-[11px] text-muted-foreground">Completed this week</p>
-              <p className="mt-1 text-lg font-semibold">326</p>
+              <p className="mt-1 text-lg font-semibold">{dashboard?.order_counts.total ?? "—"}</p>
             </div>
             <div>
               <p className="text-[11px] text-muted-foreground">On-time delivery</p>
-              <p className="mt-1 text-lg font-semibold">96.8%</p>
+              <p className="mt-1 text-lg font-semibold">—</p>
             </div>
           </div>
           <Link
@@ -260,17 +268,17 @@ export function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {DEMO_ORDERS.slice(0, 4).map((order) => (
+                {(dashboard?.recent_orders ?? []).slice(0, 4).map((order) => (
                   <tr
                     key={order.id}
                     className="border-b border-border last:border-0 hover:bg-muted/40"
                   >
-                    <td className="px-5 py-3.5 text-xs font-semibold text-primary">{order.id}</td>
+                    <td className="px-5 py-3.5 text-xs font-semibold text-primary">{order.order_number}</td>
                     <td className="px-3 py-3.5">
                       <div className="flex items-center gap-2.5">
                         <AvatarInitials
-                          name={order.customer}
-                          initials={order.initials}
+                          name={order.customer_name}
+                          initials={order.customer_name.split(" ").map((part)=>part[0]).join("").slice(0,2).toUpperCase()}
                           className="size-7 text-[9px]"
                         />
                         <span className="whitespace-nowrap text-xs font-medium">
@@ -282,10 +290,10 @@ export function DashboardPage() {
                       {order.due}
                     </td>
                     <td className="px-3 py-3.5">
-                      <OrderStatusBadge status={order.status} />
+                      <span className="text-xs capitalize">{order.status.replaceAll("_"," ")}</span>
                     </td>
                     <td className="whitespace-nowrap px-5 py-3.5 text-right text-xs font-semibold">
-                      {formatKES(order.amount)}
+                      {formatKES(Number(order.total_amount))}
                     </td>
                   </tr>
                 ))}
@@ -349,13 +357,13 @@ export function DashboardPage() {
                     <Droplets className="size-4" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-semibold">{transaction.customer}</p>
+                    <p className="truncate text-xs font-semibold">{transaction.customer_name || "Customer"}</p>
                     <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
-                      {transaction.method} · {transaction.time}
+                      {transaction.method} · {new Date(transaction.paid_at).toLocaleTimeString()}
                     </p>
                   </div>
                   <span className="whitespace-nowrap text-xs font-semibold">
-                    {formatKES(transaction.amount)}
+                    {formatKES(Number(transaction.amount))}
                   </span>
                 </div>
               ))}
