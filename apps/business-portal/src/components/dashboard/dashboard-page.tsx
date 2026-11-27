@@ -277,7 +277,7 @@ export function DashboardPage() {
                           className="size-7 text-[9px]"
                         />
                         <span className="whitespace-nowrap text-xs font-medium">
-                          {order.customer}
+                          {order.customer_name}
                         </span>
                       </div>
                     </td>
@@ -346,7 +346,7 @@ export function DashboardPage() {
               </Link>
             </div>
             <div className="space-y-3.5">
-              {DEMO_TRANSACTIONS.slice(0, 3).map((transaction) => (
+              {(dashboard?.recent_payments ?? []).slice(0, 3).map((transaction) => (
                 <div key={transaction.id} className="flex items-center gap-3">
                   <span className="grid size-9 shrink-0 place-items-center rounded-full bg-success/10 text-success">
                     <Droplets className="size-4" />
