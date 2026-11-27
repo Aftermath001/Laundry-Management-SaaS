@@ -123,6 +123,8 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
           };
         }>("/v1/auth/me");
 
+        toast.success("Login successful", { description: "Welcome back to LaundryFlow." });
+
         if (identity.authorization.requires_onboarding) {
           await navigate({ to: "/onboarding" });
           return;
@@ -131,7 +133,6 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
         // Platform-admin and business/branch users are now distinguished by
         // the server-resolved authorization context. The workspace routes will
         // enforce these permissions server-side as their dashboards are added.
-        toast.success("Login successful", { description: "Welcome back to LaundryFlow." });
         await navigate({ to: "/" });
         return;
       }
