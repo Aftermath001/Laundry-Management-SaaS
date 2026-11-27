@@ -7,6 +7,7 @@ import rateLimit from "@fastify/rate-limit";
 import { registerAuth } from "./plugins/auth";
 import { supabaseRoutes } from "./routes/supabase";
 import { businessRoutes } from "./modules/businesses/businesses.routes";
+import { invitationRoutes } from "./modules/businesses/invitations.routes";
 
 export async function buildApp() {
   const app = Fastify({
@@ -157,6 +158,7 @@ export async function buildApp() {
 
   // Business management routes
   await app.register(businessRoutes);
+  await app.register(invitationRoutes);
 
   return app;
 }
