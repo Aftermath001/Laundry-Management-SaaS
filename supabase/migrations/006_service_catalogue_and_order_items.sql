@@ -77,8 +77,8 @@ create policy "Members with branch access can view order items"
     and exists (
       select 1
       from public.laundry_orders o
-      where o.id = order_id
-        and o.business_id = business_id
+      where o.id = laundry_order_items.order_id
+        and o.business_id = laundry_order_items.business_id
         and public.can_access_branch(o.branch_id)
     )
   );
@@ -91,15 +91,15 @@ create policy "Members with branch access can add order items"
     and exists (
       select 1
       from public.laundry_orders o
-      where o.id = order_id
-        and o.business_id = business_id
+      where o.id = laundry_order_items.order_id
+        and o.business_id = laundry_order_items.business_id
         and public.can_access_branch(o.branch_id)
     )
     and exists (
       select 1
       from public.laundry_services s
-      where s.id = service_id
-        and s.business_id = business_id
+      where s.id = laundry_order_items.service_id
+        and s.business_id = laundry_order_items.business_id
         and s.is_active = true
     )
   );
