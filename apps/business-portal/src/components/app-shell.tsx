@@ -96,7 +96,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   async function resolveAuthorization(metadata: Record<string, unknown>, email?: string) {
     try {
       const identity = await apiClient.get<{ user: { full_name: string | null }; authorization: { primary_role: PrimaryRole; requires_onboarding: boolean } }>("/v1/auth/me");
-      if (!active) return;
       if (identity.authorization.requires_onboarding || identity.authorization.primary_role === "unassigned") {
         setAuthStatus("authenticated");
         void navigate({ to: "/onboarding" });
@@ -112,7 +111,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       setAccountLabel(identity.user.full_name || (typeof metadata.full_name === "string" ? metadata.full_name : email) || "Account");
       setAuthStatus("authenticated");
     } catch (error) {
-      if (!active) return;
       setAuthError(error instanceof Error ? error.message : "Unable to resolve your permissions.");
       setAuthStatus("error");
     }
@@ -190,6 +188,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
             <SidebarContent
               path={path}
+              navigationItems={roleNavigation}
               onNavigate={() => setMobileOpen(false)}
               onSignOut={signOut}
             />
