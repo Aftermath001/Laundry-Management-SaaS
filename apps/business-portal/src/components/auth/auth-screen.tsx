@@ -99,6 +99,25 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
           password,
         });
         if (authError) throw authError;
+
+        // Resolve the user's actual role and branch assignments from the API.
+        // Never infer privileged roles from editable user metadata.
+        const identity = await apiClient.get<{
+          success: boolean;
+          authorization: {
+            primary_role: string;
+            requires_onboarding: boolean;
+          };
+        }>("/v1/auth/me");
+
+        if (identity.authorization.requires_onboarding) {
+          await navigate({ to: "/onboarding" });
+          return;
+        }
+
+        // Platform-admin and business/branch users are now distinguished by
+        // the server-resolved authorization context. The workspace routes will
+        // enforce these permissions server-side as their dashboards are added.
         await navigate({ to: "/" });
         return;
       }
