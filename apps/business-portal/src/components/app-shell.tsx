@@ -267,8 +267,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         </main>
       </div>
 
-      <nav className={cn("fixed inset-x-0 bottom-0 z-30 grid border-t border-border bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1 backdrop-blur lg:hidden", roleNavigation.length === 2 ? "grid-cols-2" : roleNavigation.length === 3 ? "grid-cols-3" : "grid-cols-4")} border-t border-border bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1 backdrop-blur lg:hidden">
-        {navigation.map(({ label, to, icon: Icon }) => (
+      <nav className={cn("fixed inset-x-0 bottom-0 z-30 grid border-t border-border bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1 backdrop-blur lg:hidden", roleNavigation.length === 2 ? "grid-cols-2" : roleNavigation.length === 3 ? "grid-cols-3" : "grid-cols-4")}>
+        {roleNavigation.map(({ label, to, icon: Icon }) => (
           <Link
             key={to}
             to={to}
