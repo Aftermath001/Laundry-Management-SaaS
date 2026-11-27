@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 
 const businessParamsSchema = z.object({
@@ -32,7 +32,7 @@ const updateServiceSchema = z
   });
 
 async function getMembership(
-  request: Parameters<Parameters<FastifyInstance["get"]>[1]>[0],
+  request: FastifyRequest,
   businessId: string,
 ) {
   if (!request.supabase || !request.user) {
