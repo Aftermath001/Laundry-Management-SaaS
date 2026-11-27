@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { apiClient } from "@/services/api-client";
+import { toast } from "sonner";
 
 type AuthMode = "login" | "register" | "forgot" | "reset" | "onboarding";
 
@@ -107,6 +108,7 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
 
         if (inviteToken) {
           await apiClient.post("/v1/invitations/accept", { token: inviteToken });
+          toast.success("Signed in successfully", { description: "Your invitation has been accepted." });
           await navigate({ to: "/" });
           return;
         }
@@ -120,6 +122,8 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
             requires_onboarding: boolean;
           };
         }>("/v1/auth/me");
+
+        toast.success("Login successful", { description: "Welcome back to LaundryFlow." });
 
         if (identity.authorization.requires_onboarding) {
           await navigate({ to: "/onboarding" });
@@ -150,18 +154,20 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
         if (authError) throw authError;
 
         if (!data.session) {
-          setNotice(
-            inviteToken
-              ? "Your account was created. Confirm your email, then return using this invitation link to activate your access."
-              : "Your account request was received. Check your email to confirm your address, then sign in to continue.",
-          );
+          const confirmationMessage = inviteToken
+            ? "Your account was created. Confirm your email, then return using this invitation link to activate your access."
+            : "Your account was created. Check your email to confirm your address, then sign in to continue.";
+          setNotice(confirmationMessage);
+          toast.success("Account created", { description: confirmationMessage });
           return;
         }
 
         if (inviteToken) {
           await apiClient.post("/v1/invitations/accept", { token: inviteToken });
+          toast.success("Registration successful", { description: "Your invitation has been accepted." });
           await navigate({ to: "/" });
         } else {
+          toast.success("Registration successful", { description: "Your account is ready. Set up your business to continue." });
           await navigate({ to: "/onboarding" });
         }
         return;
@@ -216,9 +222,12 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
         await navigate({ to: "/" });
       }
     } catch (caught) {
-      setError(
-        caught instanceof Error ? caught.message : "Something went wrong. Please try again.",
-      );
+      const message = caught instanceof Error ? caught.message : "Something went wrong. Please try again.";
+      setError(message);
+      toast.error(mode === "login" ? "Login failed" : mode === "register" ? "Registration failed" : "Request failed", {
+        description: message,
+        duration: 7000,
+      });
     } finally {
       setLoading(false);
     }
