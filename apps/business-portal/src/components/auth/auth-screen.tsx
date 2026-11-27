@@ -57,7 +57,12 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [inviteToken, setInviteToken] = useState("");
   const copy = authCopy[mode];
+
+  useEffect(() => {
+    setInviteToken(new URLSearchParams(window.location.search).get("invite") ?? "");
+  }, []);
 
   useEffect(() => {
     if (mode !== "onboarding") return;
@@ -100,6 +105,12 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
         });
         if (authError) throw authError;
 
+        if (inviteToken) {
+          await apiClient.post("/v1/invitations/accept", { token: inviteToken });
+          await navigate({ to: "/" });
+          return;
+        }
+
         // Resolve the user's actual role and branch assignments from the API.
         // Never infer privileged roles from editable user metadata.
         const identity = await apiClient.get<{
@@ -127,10 +138,12 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
           email: email.trim(),
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/onboarding`,
+            emailRedirectTo: inviteToken
+              ? `${window.location.origin}/register?invite=${encodeURIComponent(inviteToken)}`
+              : `${window.location.origin}/onboarding`,
             data: {
               full_name: fullName.trim(),
-              business_name: businessName.trim(),
+              ...(inviteToken ? {} : { business_name: businessName.trim() }),
             },
           },
         });
@@ -138,12 +151,19 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
 
         if (!data.session) {
           setNotice(
-            "Your account request was received. Check your email to confirm your address, then sign in to continue.",
+            inviteToken
+              ? "Your account was created. Confirm your email, then return using this invitation link to activate your access."
+              : "Your account request was received. Check your email to confirm your address, then sign in to continue.",
           );
           return;
         }
 
-        await navigate({ to: "/onboarding" });
+        if (inviteToken) {
+          await apiClient.post("/v1/invitations/accept", { token: inviteToken });
+          await navigate({ to: "/" });
+        } else {
+          await navigate({ to: "/onboarding" });
+        }
         return;
       }
 
@@ -232,6 +252,11 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
             <form onSubmit={handleSubmit} className="mt-7 space-y-4">
               {mode === "register" && (
                 <>
+                  {inviteToken && (
+                    <div className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs leading-5">
+                      You have been invited to join a LaundryFlow business. Create your account with the invited email address.
+                    </div>
+                  )}
                   <label className="block space-y-1.5 text-xs font-medium">
                     Full name
                     <Input
@@ -242,7 +267,7 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
                       placeholder="Your full name"
                     />
                   </label>
-                  <label className="block space-y-1.5 text-xs font-medium">
+                  {!inviteToken && <label className="block space-y-1.5 text-xs font-medium">
                     Business name
                     <Input
                       required
@@ -250,7 +275,7 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
                       onChange={(event) => setBusinessName(event.target.value)}
                       placeholder="Your laundry business"
                     />
-                  </label>
+                  </label>}
                 </>
               )}
               {(mode === "login" || mode === "register" || mode === "forgot") && (
