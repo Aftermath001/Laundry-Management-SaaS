@@ -8,6 +8,7 @@ import { registerAuth } from "./plugins/auth";
 import { supabaseRoutes } from "./routes/supabase";
 import { businessRoutes } from "./modules/businesses/businesses.routes";
 import { invitationRoutes } from "./modules/businesses/invitations.routes";
+import { dashboardRoutes } from "./modules/businesses/dashboard.routes";
 
 export async function buildApp() {
   const app = Fastify({
@@ -159,6 +160,7 @@ export async function buildApp() {
   // Business management routes
   await app.register(businessRoutes);
   await app.register(invitationRoutes);
+  await app.register(dashboardRoutes);
 
   return app;
 }
