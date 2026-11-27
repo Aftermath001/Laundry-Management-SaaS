@@ -122,6 +122,23 @@ GRANT EXECUTE ON FUNCTION public.is_platform_admin() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_branch_member(uuid, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.can_access_branch(uuid, uuid) TO authenticated;
 
+-- Platform administrators can inspect all tenant records for support and oversight.
+DROP POLICY IF EXISTS "Members can view their businesses" ON public.businesses;
+CREATE POLICY "Members and platform admins can view businesses"
+ON public.businesses
+FOR SELECT TO authenticated
+USING (
+    public.is_platform_admin()
+    OR public.is_business_member(id)
+);
+
+DROP POLICY IF EXISTS "Platform admins can view business memberships"
+ON public.business_members;
+CREATE POLICY "Platform admins can view business memberships"
+ON public.business_members
+FOR SELECT TO authenticated
+USING (public.is_platform_admin());
+
 -- Branch managers and staff see only assigned branches.
 DROP POLICY IF EXISTS "Business members can view branches" ON public.branches;
 
