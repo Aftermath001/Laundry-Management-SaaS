@@ -22,7 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { DEMO_EMPLOYEES, DEMO_BRANCHES, EMPLOYEE_ROLES } from "@/data/demo-data";
+import { DEMO_EMPLOYEES, EMPLOYEE_ROLES } from "@/data/demo-data";
 import { pageMetadata } from "@/lib/seo";
 import { toast } from "sonner";
 import { apiClient } from "@/services/api-client";
@@ -98,8 +98,12 @@ export function EmployeesPage() {
       });
       const inviteUrl = result.invitation_url;
       if (inviteUrl) {
-        await navigator.clipboard.writeText(inviteUrl);
-        toast.success("Invitation link created and copied. Send it to the team member.");
+        try {
+          await navigator.clipboard.writeText(inviteUrl);
+          toast.success("Invitation link created and copied. Send it to the team member.");
+        } catch {
+          window.prompt("Copy this invitation link and send it to the team member:", inviteUrl);
+        }
       } else {
         toast.success(result.message);
       }
