@@ -49,7 +49,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     if (error instanceof Error && error.message.includes("Supabase is not configured")) {
       throw error;
     }
-    throw new ApiError("Unable to reach the LaundryFlow service. Check your connection and try again.", 0);
+    throw new ApiError(
+      "Unable to reach the LaundryFlow service. Check your connection and try again.",
+      0,
+    );
   }
 
   if (!response.ok) {

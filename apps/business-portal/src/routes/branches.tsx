@@ -1,52 +1,537 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowRight, MapPin, MoreHorizontal, Plus, Search, Store, UsersRound } from "lucide-react";
+import {
+  ArrowRight,
+  MapPin,
+  MoreHorizontal,
+  Plus,
+  Search,
+  Store,
+  UsersRound,
+  Trash2,
+  Loader2,
+} from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { EmptyState, PageHeading } from "@/components/shared";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { DEMO_BRANCHES, formatKES } from "@/data/demo-data";
+import { apiClient } from "@/services/api-client";
 import { pageMetadata } from "@/lib/seo";
 import { toast } from "sonner";
 
-type Branch = (typeof DEMO_BRANCHES)[number];
+type Business = {
+  id: string;
+  name: string;
+};
+
+type Branch = {
+  id: string;
+  business_id: string;
+  name: string;
+  code: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  is_main: boolean;
+  status: "active" | "inactive";
+  created_at: string;
+  updated_at: string;
+};
+
+type BusinessResponse = {
+  success: boolean;
+  businesses: Business[];
+};
+
+type BranchesResponse = {
+  success: boolean;
+  branches: Branch[];
+};
+
+type BranchResponse = {
+  success: boolean;
+  branch: Branch;
+};
+
+type BranchForm = {
+  name: string;
+  code: string;
+  address: string;
+  phone: string;
+  email: string;
+};
+
+const emptyForm: BranchForm = {
+  name: "",
+  code: "",
+  address: "",
+  phone: "",
+  email: "",
+};
 
 export function BranchesPage() {
-  const [branches, setBranches] = useState<Branch[]>(DEMO_BRANCHES);
+  const [business, setBusiness] = useState<Business | null>(null);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Branch | null>(null);
-  const [name, setName] = useState("");
-  const [location, setLocation] = useState("");
-  const [manager, setManager] = useState("");
-  const filtered = useMemo(() => branches.filter((branch) => `${branch.name} ${branch.location} ${branch.manager}`.toLowerCase().includes(query.toLowerCase())), [branches, query]);
+  const [editing, setEditing] = useState<Branch | null>(null);
+  const [form, setForm] = useState<BranchForm>(emptyForm);
 
-  function saveBranch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!name.trim() || !location.trim()) return;
-    const branch = { id: `BR-${String(branches.length + 1).padStart(3, "0")}`, name: name.trim(), location: location.trim(), manager: manager || "Unassigned", orders: 0, revenue: 0, status: "Open" };
-    setBranches((current) => [...current, branch]);
-    setOpen(false);
-    setName(""); setLocation(""); setManager("");
-    toast.success("Branch added to the demo workspace.");
+  async function loadBranches() {
+    setLoading(true);
+
+    try {
+      const businessResponse = await apiClient.get<BusinessResponse>("/v1/businesses");
+
+      const currentBusiness = businessResponse.businesses?.[0];
+
+      if (!currentBusiness) {
+        setBusiness(null);
+        setBranches([]);
+        return;
+      }
+
+      setBusiness(currentBusiness);
+
+      const branchResponse = await apiClient.get<BranchesResponse>(
+        `/v1/businesses/${currentBusiness.id}/branches`,
+      );
+
+      setBranches(branchResponse.branches ?? []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to load branches.");
+    } finally {
+      setLoading(false);
+    }
   }
 
-  return <AppShell>
-    <PageHeading eyebrow="Business locations" title="Branches" description="Manage locations, assigned managers, and branch performance." action={<Button onClick={() => setOpen(true)} className="h-9"><Plus className="size-4" />Add branch</Button>} />
-    <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3"><div className="rounded-lg border border-border bg-card p-4"><p className="text-xs text-muted-foreground">Total branches</p><p className="mt-2 text-2xl font-semibold">{branches.length}</p></div><div className="rounded-lg border border-border bg-card p-4"><p className="text-xs text-muted-foreground">Open today</p><p className="mt-2 text-2xl font-semibold">{branches.filter((branch) => branch.status === "Open").length}</p></div><div className="col-span-2 rounded-lg border border-border bg-card p-4 sm:col-span-1"><p className="text-xs text-muted-foreground">Combined monthly revenue</p><p className="mt-2 truncate text-2xl font-semibold">{formatKES(branches.reduce((total, branch) => total + branch.revenue, 0))}</p></div></div>
-    <section className="rounded-lg border border-border bg-card shadow-[0_1px_2px_0_var(--color-border)]">
-      <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"><div><h2 className="text-sm font-semibold">All locations</h2><p className="mt-1 text-xs text-muted-foreground">{filtered.length} business locations</p></div><label className="relative sm:w-64"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label="Search branches" placeholder="Search branches" value={query} onChange={(event) => setQuery(event.target.value)} className="h-9 pl-9 text-xs" /></label></div>
-      {filtered.length === 0 ? <EmptyState title="No branches found" message="Try another location or manager name." /> : <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left"><thead><tr className="border-b border-border bg-muted/40 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"><th className="px-5 py-3">Branch</th><th className="px-3 py-3">Manager</th><th className="px-3 py-3 text-right">Orders · month</th><th className="px-3 py-3 text-right">Revenue · month</th><th className="px-3 py-3">Status</th><th className="px-5 py-3 text-right">Details</th></tr></thead><tbody>{filtered.map((branch) => <tr key={branch.id} className="border-b border-border last:border-0 hover:bg-muted/30"><td className="px-5 py-4"><div className="flex items-center gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-md bg-secondary text-primary"><Store className="size-4" /></span><div><p className="text-xs font-semibold">{branch.name}</p><p className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground"><MapPin className="size-3" />{branch.location}</p></div></div></td><td className="px-3 py-4 text-xs text-muted-foreground">{branch.manager}</td><td className="px-3 py-4 text-right text-xs font-medium tabular-nums">{branch.orders}</td><td className="px-3 py-4 text-right text-xs font-semibold tabular-nums">{formatKES(branch.revenue)}</td><td className="px-3 py-4"><span className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${branch.status === "Open" ? "text-success" : "text-warning"}`}><span className={`size-1.5 rounded-full ${branch.status === "Open" ? "bg-success" : "bg-warning"}`} />{branch.status}</span></td><td className="px-5 py-4 text-right"><Button variant="ghost" size="icon" aria-label={`View ${branch.name} performance`} onClick={() => setSelected(branch)} className="size-8 text-muted-foreground"><MoreHorizontal className="size-4" /></Button></td></tr>)}</tbody></table></div>}
-    </section>
+  useEffect(() => {
+    void loadBranches();
+  }, []);
 
-    <Dialog open={open} onOpenChange={setOpen}><DialogContent><DialogHeader><DialogTitle>Add a branch</DialogTitle><DialogDescription>Add a location to the demo workspace.</DialogDescription></DialogHeader><form onSubmit={saveBranch} className="space-y-4"><label className="block space-y-1.5 text-xs font-medium">Branch name<Input required value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Lavington Studio" /></label><label className="block space-y-1.5 text-xs font-medium">Location<Input required value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Neighborhood, city" /></label><label className="block space-y-1.5 text-xs font-medium">Branch manager<select value={manager} onChange={(event) => setManager(event.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"><option value="">Choose manager later</option>{["Nia Wanjiku", "David Otieno", "Mercy Njeri", "Alex Kamau"].map((nameOption) => <option key={nameOption}>{nameOption}</option>)}</select></label><DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button><Button type="submit">Add branch</Button></DialogFooter></form></DialogContent></Dialog>
+  const filtered = useMemo(
+    () =>
+      branches.filter((branch) =>
+        `${branch.name} ${branch.address ?? ""} ${branch.code ?? ""}`
+          .toLowerCase()
+          .includes(query.toLowerCase()),
+      ),
+    [branches, query],
+  );
 
-    <Dialog open={selected !== null} onOpenChange={(value) => !value && setSelected(null)}><DialogContent>{selected && <><DialogHeader><DialogTitle>{selected.name}</DialogTitle><DialogDescription>{selected.location} · Branch performance</DialogDescription></DialogHeader><div className="grid grid-cols-2 gap-3"><div className="rounded-md bg-muted/50 p-3.5"><p className="text-[11px] text-muted-foreground">Orders this month</p><p className="mt-1.5 text-xl font-semibold">{selected.orders}</p></div><div className="rounded-md bg-muted/50 p-3.5"><p className="text-[11px] text-muted-foreground">Monthly revenue</p><p className="mt-1.5 text-xl font-semibold">{formatKES(selected.revenue)}</p></div><div className="col-span-2 flex items-center gap-2 border-t border-border pt-3 text-xs"><UsersRound className="size-4 text-primary" /><span className="text-muted-foreground">Manager</span><strong className="ml-auto">{selected.manager}</strong></div></div><DialogFooter><Button variant="outline" onClick={() => { setSelected(null); toast.success("Branch settings are ready to connect."); }}>Edit branch</Button><Button onClick={() => setSelected(null)}>Done <ArrowRight className="size-4" /></Button></DialogFooter></>}</DialogContent></Dialog>
-  </AppShell>;
+  const activeBranches = branches.filter((branch) => branch.status === "active").length;
+
+  function openCreateDialog() {
+    setEditing(null);
+    setForm(emptyForm);
+    setOpen(true);
+  }
+
+  function openEditDialog(branch: Branch) {
+    setEditing(branch);
+    setForm({
+      name: branch.name,
+      code: branch.code ?? "",
+      address: branch.address ?? "",
+      phone: branch.phone ?? "",
+      email: branch.email ?? "",
+    });
+    setSelected(null);
+    setOpen(true);
+  }
+
+  function updateForm(field: keyof BranchForm, value: string) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function saveBranch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!business || !form.name.trim()) return;
+
+    setSaving(true);
+
+    const payload = {
+      name: form.name.trim(),
+      code: form.code.trim() || undefined,
+      address: form.address.trim() || undefined,
+      phone: form.phone.trim() || undefined,
+      email: form.email.trim() || undefined,
+    };
+
+    try {
+      if (editing) {
+        const response = await apiClient.patch<BranchResponse>(
+          `/v1/businesses/${business.id}/branches/${editing.id}`,
+          payload,
+        );
+
+        setBranches((current) =>
+          current.map((branch) => (branch.id === editing.id ? response.branch : branch)),
+        );
+
+        toast.success("Branch updated successfully.");
+      } else {
+        const response = await apiClient.post<BranchResponse>(
+          `/v1/businesses/${business.id}/branches`,
+          payload,
+        );
+
+        setBranches((current) => [...current, response.branch]);
+
+        toast.success("Branch created successfully.");
+      }
+
+      setOpen(false);
+      setEditing(null);
+      setForm(emptyForm);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to save branch.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteBranch(branch: Branch) {
+    if (!business) return;
+
+    if (branch.is_main) {
+      toast.error("The main branch cannot be deleted.");
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete "${branch.name}"? This action cannot be undone.`);
+
+    if (!confirmed) return;
+
+    try {
+      await apiClient.delete(`/v1/businesses/${business.id}/branches/${branch.id}`);
+
+      setBranches((current) => current.filter((item) => item.id !== branch.id));
+
+      setSelected(null);
+      toast.success("Branch deleted successfully.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to delete branch.");
+    }
+  }
+
+  return (
+    <AppShell>
+      <PageHeading
+        eyebrow="Business locations"
+        title="Branches"
+        description="Manage locations and branch settings."
+        action={
+          <Button onClick={openCreateDialog} className="h-9" disabled={!business || loading}>
+            <Plus className="size-4" />
+            Add branch
+          </Button>
+        }
+      />
+
+      {business && (
+        <p className="mb-4 text-xs text-muted-foreground">
+          Business: <span className="font-medium">{business.name}</span>
+        </p>
+      )}
+
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Total branches</p>
+          <p className="mt-2 text-2xl font-semibold">{loading ? "—" : branches.length}</p>
+        </div>
+
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground">Active branches</p>
+          <p className="mt-2 text-2xl font-semibold">{loading ? "—" : activeBranches}</p>
+        </div>
+
+        <div className="col-span-2 rounded-lg border border-border bg-card p-4 sm:col-span-1">
+          <p className="text-xs text-muted-foreground">Monthly revenue</p>
+          <p className="mt-2 text-2xl font-semibold">—</p>
+          <p className="mt-1 text-xs text-muted-foreground">Not yet connected</p>
+        </div>
+      </div>
+
+      <section className="rounded-lg border border-border bg-card shadow-[0_1px_2px_0_var(--color-border)]">
+        <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <div>
+            <h2 className="text-sm font-semibold">All locations</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {filtered.length} business locations
+            </p>
+          </div>
+
+          <label className="relative sm:w-64">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              aria-label="Search branches"
+              placeholder="Search branches"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="h-9 pl-9 text-xs"
+            />
+          </label>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center gap-2 p-12 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" />
+            Loading branches...
+          </div>
+        ) : !business ? (
+          <EmptyState
+            title="No business found"
+            message="Your account is not linked to an active business."
+          />
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            title="No branches found"
+            message={
+              query ? "Try another branch name or code." : "Add your first business location."
+            }
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left">
+              <thead>
+                <tr className="border-b border-border bg-muted/40 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <th className="px-5 py-3">Branch</th>
+                  <th className="px-3 py-3">Code</th>
+                  <th className="px-3 py-3 text-right">Orders</th>
+                  <th className="px-3 py-3 text-right">Revenue</th>
+                  <th className="px-3 py-3">Status</th>
+                  <th className="px-5 py-3 text-right">Details</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {filtered.map((branch) => (
+                  <tr
+                    key={branch.id}
+                    className="border-b border-border last:border-0 hover:bg-muted/30"
+                  >
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <span className="grid size-9 shrink-0 place-items-center rounded-md bg-secondary text-primary">
+                          <Store className="size-4" />
+                        </span>
+
+                        <div>
+                          <p className="text-xs font-semibold">{branch.name}</p>
+
+                          <p className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
+                            <MapPin className="size-3" />
+                            {branch.address || "No address provided"}
+                          </p>
+
+                          {branch.is_main && (
+                            <span className="mt-1 inline-flex text-[10px] font-medium text-primary">
+                              Main branch
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="px-3 py-4 text-xs text-muted-foreground">
+                      {branch.code || "—"}
+                    </td>
+
+                    <td className="px-3 py-4 text-right text-xs text-muted-foreground">—</td>
+
+                    <td className="px-3 py-4 text-right text-xs text-muted-foreground">—</td>
+
+                    <td className="px-3 py-4">
+                      <span
+                        className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${
+                          branch.status === "active" ? "text-success" : "text-warning"
+                        }`}
+                      >
+                        <span
+                          className={`size-1.5 rounded-full ${
+                            branch.status === "active" ? "bg-success" : "bg-warning"
+                          }`}
+                        />
+                        {branch.status === "active" ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+
+                    <td className="px-5 py-4 text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`View ${branch.name} details`}
+                        onClick={() => setSelected(branch)}
+                        className="size-8 text-muted-foreground"
+                      >
+                        <MoreHorizontal className="size-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit branch" : "Add a branch"}</DialogTitle>
+
+            <DialogDescription>
+              {editing ? "Update the branch details." : "Create a new business location."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={saveBranch} className="space-y-4">
+            <label className="block space-y-1.5 text-xs font-medium">
+              Branch name
+              <Input
+                required
+                value={form.name}
+                onChange={(event) => updateForm("name", event.target.value)}
+                placeholder="e.g. Lavington Studio"
+              />
+            </label>
+
+            <label className="block space-y-1.5 text-xs font-medium">
+              Branch code
+              <Input
+                value={form.code}
+                onChange={(event) => updateForm("code", event.target.value)}
+                placeholder="e.g. LVG-001"
+              />
+            </label>
+
+            <label className="block space-y-1.5 text-xs font-medium">
+              Location / address
+              <Input
+                value={form.address}
+                onChange={(event) => updateForm("address", event.target.value)}
+                placeholder="Neighborhood, city"
+              />
+            </label>
+
+            <label className="block space-y-1.5 text-xs font-medium">
+              Phone
+              <Input
+                value={form.phone}
+                onChange={(event) => updateForm("phone", event.target.value)}
+                placeholder="+254..."
+              />
+            </label>
+
+            <label className="block space-y-1.5 text-xs font-medium">
+              Email
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(event) => updateForm("email", event.target.value)}
+                placeholder="branch@example.com"
+              />
+            </label>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={saving}
+              >
+                Cancel
+              </Button>
+
+              <Button type="submit" disabled={saving}>
+                {saving && <Loader2 className="size-4 animate-spin" />}
+                {editing ? "Save changes" : "Add branch"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={selected !== null} onOpenChange={(value) => !value && setSelected(null)}>
+        <DialogContent>
+          {selected && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{selected.name}</DialogTitle>
+                <DialogDescription>{selected.address || "No address provided"}</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-3">
+                <div className="rounded-md bg-muted/50 p-3.5">
+                  <p className="text-[11px] text-muted-foreground">Branch code</p>
+                  <p className="mt-1.5 text-sm font-semibold">{selected.code || "Not assigned"}</p>
+                </div>
+
+                <div className="rounded-md bg-muted/50 p-3.5">
+                  <p className="text-[11px] text-muted-foreground">Phone</p>
+                  <p className="mt-1.5 text-sm font-semibold">{selected.phone || "Not provided"}</p>
+                </div>
+
+                <div className="rounded-md bg-muted/50 p-3.5">
+                  <p className="text-[11px] text-muted-foreground">Email</p>
+                  <p className="mt-1.5 text-sm font-semibold">{selected.email || "Not provided"}</p>
+                </div>
+
+                <div className="flex items-center gap-2 border-t border-border pt-3 text-xs">
+                  <UsersRound className="size-4 text-primary" />
+                  <span className="text-muted-foreground">Manager</span>
+                  <strong className="ml-auto">Not assigned</strong>
+                </div>
+
+                {selected.is_main && (
+                  <p className="rounded-md border border-border p-3 text-xs text-muted-foreground">
+                    This is the main branch. It cannot be deleted.
+                  </p>
+                )}
+              </div>
+
+              <DialogFooter className="flex-wrap sm:justify-between">
+                {!selected.is_main && (
+                  <Button variant="destructive" onClick={() => void deleteBranch(selected)}>
+                    <Trash2 className="size-4" />
+                    Delete
+                  </Button>
+                )}
+
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => openEditDialog(selected)}>
+                    Edit branch
+                  </Button>
+
+                  <Button onClick={() => setSelected(null)}>
+                    Done <ArrowRight className="size-4" />
+                  </Button>
+                </div>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </AppShell>
+  );
 }
 
 export const Route = createFileRoute("/branches")({
-  head: () => ({ meta: pageMetadata("Branches", "Manage LaundryFlow locations, branch managers, and monthly performance.") }),
+  head: () => ({
+    meta: pageMetadata("Branches", "Manage LaundryFlow locations and branch settings."),
+  }),
   component: BranchesPage,
 });

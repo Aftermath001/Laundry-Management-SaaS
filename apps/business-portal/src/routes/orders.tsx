@@ -4,7 +4,10 @@ import { pageMetadata } from "@/lib/seo";
 
 export const Route = createFileRoute("/orders")({
   head: () => ({
-    meta: pageMetadata("Orders", "Create and track LaundryFlow orders across your laundry branches."),
+    meta: pageMetadata(
+      "Orders",
+      "Create and track LaundryFlow orders across your laundry branches.",
+    ),
   }),
   component: OrdersPage,
 });
