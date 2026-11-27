@@ -31,16 +31,13 @@ import {
 } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/services/api-client";
-import {
-  DEMO_BRANCHES,
-  formatKES,
-} from "@/data/demo-data";
+import { formatKES } from "@/data/demo-data";
 
 export function DashboardPage() {
   const [userName, setUserName] = useState("there");
   const [greeting, setGreeting] = useState("Hello");
   const [today, setToday] = useState("");
-  const [dashboard, setDashboard] = useState<{order_counts:{total:number;active:number;pending:number;processing:number;ready:number};revenue:{today:number;month:number;trend:Record<string,number>};branches:{active:number;total:number};recent_orders:Array<{id:string;order_number:string;customer_name:string;status:string;total_amount:number|string;due_at:string|null}>;recent_payments:Array<{id:string;amount:number|string;method:string;customer_name:string|null;paid_at:string}>} | null>(null);
+  const [dashboard, setDashboard] = useState<{order_counts:{total:number;active:number;pending:number;processing:number;ready:number};revenue:{today:number;month:number;trend:Record<string,number>};branches:{active:number;total:number;performance:Array<{id:string;name:string;orders:number;revenue:number}>};recent_orders:Array<{id:string;order_number:string;customer_name:string;status:string;total_amount:number|string;due_at:string|null}>;recent_payments:Array<{id:string;amount:number|string;method:string;customer_name:string|null;paid_at:string}>} | null>(null);
   const [dashboardError, setDashboardError] = useState("");
 
   useEffect(() => {
@@ -282,7 +279,7 @@ export function DashboardPage() {
                       </div>
                     </td>
                     <td className="whitespace-nowrap px-3 py-3.5 text-xs text-muted-foreground">
-                      {order.due}
+                      {order.due_at ? new Date(order.due_at).toLocaleString() : "Not set"}
                     </td>
                     <td className="px-3 py-3.5">
                       <span className="text-xs capitalize">{order.status.replaceAll("_"," ")}</span>
@@ -310,32 +307,35 @@ export function DashboardPage() {
               </Link>
             </div>
             <div className="space-y-4">
-              {DEMO_BRANCHES.slice(0, 3).map((branch, index) => (
-                <div key={branch.id} className="flex items-center gap-3">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-md bg-secondary text-secondary-foreground">
-                    <MapPin className="size-4" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-xs font-semibold">{branch.name}</p>
-                      <span className="whitespace-nowrap text-xs font-semibold">
-                        {formatKES(branch.revenue)}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex items-center gap-2">
-                      <div className="h-1 flex-1 rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-primary"
-                          style={{ width: `${[86, 72, 58][index]}%` }}
-                        />
+              {(dashboard?.branches.performance ?? []).slice(0, 3).map((branch) => {
+                const highestRevenue = Math.max(...(dashboard?.branches.performance ?? []).map((item) => item.revenue), 1);
+                return (
+                  <div key={branch.id} className="flex items-center gap-3">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-md bg-secondary text-secondary-foreground">
+                      <MapPin className="size-4" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-xs font-semibold">{branch.name}</p>
+                        <span className="whitespace-nowrap text-xs font-semibold">
+                          {formatKES(branch.revenue)}
+                        </span>
                       </div>
-                      <span className="text-[10px] text-muted-foreground">
-                        {branch.orders} orders
-                      </span>
+                      <div className="mt-2 flex items-center gap-2">
+                        <div className="h-1 flex-1 rounded-full bg-muted">
+                          <div
+                            className="h-full rounded-full bg-primary"
+                            style={{ width: `${(branch.revenue / highestRevenue) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">
+                          {branch.orders} orders
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
           <section className="rounded-lg border border-border bg-card p-4 shadow-[0_1px_2px_0_var(--color-border)] sm:p-5">
