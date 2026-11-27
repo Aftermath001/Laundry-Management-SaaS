@@ -31,7 +31,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
       request.supabase.from("laundry_orders").select("id,order_number,customer_name,customer_phone,status,total_amount,due_at,created_at,branch_id").eq("business_id",businessId).order("created_at",{ascending:false}),
       request.supabase.from("branches").select("id,name,status").eq("business_id",businessId),
       request.supabase.from("laundry_payments").select("amount").eq("business_id",businessId).eq("status","completed").gte("paid_at",dayStart),
-      request.supabase.from("laundry_payments").select("amount").eq("business_id",businessId).eq("status","completed").gte("paid_at",monthStart),
+      request.supabase.from("laundry_payments").select("amount,branch_id").eq("business_id",businessId).eq("status","completed").gte("paid_at",monthStart),
       request.supabase.from("laundry_payments").select("id,amount,method,customer_name,paid_at,reference").eq("business_id",businessId).eq("status","completed").order("paid_at",{ascending:false}).limit(5),
       request.supabase.from("laundry_payments").select("amount,paid_at").eq("business_id",businessId).eq("status","completed").gte("paid_at",weekStart)
     ]);
@@ -48,7 +48,16 @@ export async function dashboardRoutes(app: FastifyInstance) {
       dashboard:{
         order_counts:{total:orders.length,active:active.length,pending:orders.filter(o=>o.status==="pending").length,processing:orders.filter(o=>o.status==="processing").length,ready:orders.filter(o=>o.status==="ready").length},
         revenue:{today:sum(paymentTodayResult.data),month:sum(paymentMonthResult.data),trend:(weekPaymentsResult.data??[]).reduce((days,row)=>{const key=new Date(row.paid_at).toLocaleDateString("en",{weekday:"short"});days[key]=(days[key]??0)+Number(row.amount);return days;},{} as Record<string,number>)},
-        branches:{active:(branchesResult.data??[]).filter(b=>b.status==="active").length,total:(branchesResult.data??[]).length},
+        branches:{
+          active:(branchesResult.data??[]).filter(b=>b.status==="active").length,
+          total:(branchesResult.data??[]).length,
+          performance:(branchesResult.data??[]).map(branch=>({
+            id:branch.id,
+            name:branch.name,
+            orders:orders.filter(order=>order.branch_id===branch.id).length,
+            revenue:sum((paymentMonthResult.data??[]).filter(payment=>payment.branch_id===branch.id)),
+          })).sort((a,b)=>b.revenue-a.revenue),
+        },
         recent_orders:orders.slice(0,5),
         recent_payments:recentPaymentsResult.data??[],
       }
