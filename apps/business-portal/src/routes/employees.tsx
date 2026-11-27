@@ -308,7 +308,7 @@ export function EmployeesPage() {
           <DialogHeader>
             <DialogTitle>Invite a team member</DialogTitle>
             <DialogDescription>
-              Add their details and assign a role. Invitations are a local demo action only.
+              Create a secure invitation link. The recipient must register using the invited email address.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={inviteEmployee} className="space-y-4">
@@ -338,7 +338,7 @@ export function EmployeesPage() {
                 onChange={(event) => setRole(event.target.value as (typeof EMPLOYEE_ROLES)[number])}
                 className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
               >
-                {EMPLOYEE_ROLES.map((employeeRole) => (
+                {EMPLOYEE_ROLES.filter((employeeRole) => employeeRole !== "Business Owner").map((employeeRole) => (
                   <option key={employeeRole}>{employeeRole}</option>
                 ))}
               </select>
