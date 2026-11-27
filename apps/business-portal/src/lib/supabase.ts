@@ -23,6 +23,21 @@ export function getSupabaseBrowserClient(): SupabaseClient {
     );
   }
 
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(supabaseUrl);
+  } catch {
+    throw new Error(
+      "VITE_SUPABASE_URL is not a valid URL. Copy the Project URL from Supabase → Project Settings → API.",
+    );
+  }
+
+  if (parsedUrl.hostname.endsWith(".courl")) {
+    throw new Error(
+      `VITE_SUPABASE_URL contains the invalid hostname "${parsedUrl.hostname}". The Supabase project URL should end in .supabase.co. Check .env.local, .env.development, and your shell environment for an overriding value.`,
+    );
+  }
+
   browserClient = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: true,
