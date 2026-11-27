@@ -1,3 +1,5 @@
+import { getSupabaseBrowserClient } from "@/lib/supabase";
+
 const API_BASE_URL = import.meta.env["VITE_API_BASE_URL"]?.replace(/\/$/, "") ?? "";
 
 export class ApiError extends Error {
@@ -10,6 +12,10 @@ export class ApiError extends Error {
   }
 }
 
+type ApiErrorPayload = {
+  message?: string;
+};
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!API_BASE_URL) {
     throw new Error("The LaundryFlow API is not configured. Set VITE_API_BASE_URL to connect it.");
@@ -17,16 +23,47 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   let response: Response;
   try {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await getSupabaseBrowserClient().auth.getSession();
+
+    if (sessionError) {
+      throw new ApiError("Unable to verify your session. Please sign in again.", 401);
+    }
+
+    const headers = new Headers(init?.headers);
+    if (!(init?.body instanceof FormData)) {
+      headers.set("Content-Type", "application/json");
+    }
+    if (session?.access_token) {
+      headers.set("Authorization", `Bearer ${session.access_token}`);
+    }
+
     response = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
-      headers: { "Content-Type": "application/json", ...init?.headers },
+      headers,
     });
-  } catch {
-    throw new ApiError("Unable to reach the LaundryFlow service. Check your connection and try again.", 0);
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    if (error instanceof Error && error.message.includes("Supabase is not configured")) {
+      throw error;
+    }
+    throw new ApiError(
+      "Unable to reach the LaundryFlow service. Check your connection and try again.",
+      0,
+    );
   }
 
   if (!response.ok) {
-    throw new ApiError(`LaundryFlow service returned an error (${response.status}).`, response.status);
+    let message = `LaundryFlow service returned an error (${response.status}).`;
+    try {
+      const payload = (await response.json()) as ApiErrorPayload;
+      if (payload.message) message = payload.message;
+    } catch {
+      // Keep the status-based fallback when the API response is not JSON.
+    }
+    throw new ApiError(message, response.status);
   }
 
   if (response.status === 204) return undefined as T;
