@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Check,
@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { DEMO_EMPLOYEES, DEMO_BRANCHES, EMPLOYEE_ROLES } from "@/data/demo-data";
 import { pageMetadata } from "@/lib/seo";
 import { toast } from "sonner";
+import { apiClient } from "@/services/api-client";
 
 type Employee = (typeof DEMO_EMPLOYEES)[number];
 
@@ -36,7 +37,10 @@ export function EmployeesPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<(typeof EMPLOYEE_ROLES)[number]>("Cashier");
-  const [branch, setBranch] = useState("Westlands Studio");
+  const [branch, setBranch] = useState("");
+  const [businessId, setBusinessId] = useState("");
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
+  const [saving, setSaving] = useState(false);
   const filtered = useMemo(
     () =>
       employees.filter((employee) => {
@@ -49,31 +53,65 @@ export function EmployeesPage() {
   );
   const activeCount = employees.filter((employee) => employee.status === "Active").length;
 
-  function inviteEmployee(event: FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    let active = true;
+    async function loadInvitationContext() {
+      try {
+        const response = await apiClient.get<{ businesses: { id: string }[] }>("/v1/businesses");
+        const currentBusiness = response.businesses?.[0];
+        if (!currentBusiness || !active) return;
+        setBusinessId(currentBusiness.id);
+        const branchResponse = await apiClient.get<{ branches: { id: string; name: string }[] }>(
+          `/v1/businesses/${currentBusiness.id}/branches`,
+        );
+        if (active) setBranches(branchResponse.branches ?? []);
+      } catch (error) {
+        if (active) toast.error(error instanceof Error ? error.message : "Unable to load invitation details.");
+      }
+    }
+    void loadInvitationContext();
+    return () => { active = false; };
+  }, []);
+
+  async function inviteEmployee(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!name.trim() || !email.trim()) return;
-    const initials = name
-      .trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? "")
-      .join("");
-    setEmployees((current) => [
-      {
-        id: `LF-${1000 + current.length + 47}`,
-        name: name.trim(),
+    if (!businessId || !name.trim() || !email.trim()) {
+      toast.error("Complete the invitation details first.");
+      return;
+    }
+    const apiRole = role === "Business Administrator" ? "admin"
+      : role === "Branch Manager" ? "manager" : "staff";
+    if (apiRole !== "admin" && !branch) {
+      toast.error("Select a branch for this team member.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const result = await apiClient.post<{
+        invitation_url?: string;
+        invitation_token?: string;
+        message: string;
+      }>(`/v1/businesses/${businessId}/invitations`, {
         email: email.trim(),
-        role,
-        branch,
-        initials,
-        status: "Invited",
-      },
-      ...current,
-    ]);
-    setName("");
-    setEmail("");
-    setOpen(false);
-    toast.success("Team member added to the demo workspace.");
+        role: apiRole,
+        branch_id: apiRole === "admin" ? null : branch,
+      });
+      const inviteUrl = result.invitation_url;
+      if (inviteUrl) {
+        await navigator.clipboard.writeText(inviteUrl);
+        toast.success("Invitation link created and copied. Send it to the team member.");
+      } else {
+        toast.success(result.message);
+      }
+      setName("");
+      setEmail("");
+      setBranch("");
+      setOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to create invitation.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   function toggleEmployee(employee: Employee) {
@@ -155,7 +193,7 @@ export function EmployeesPage() {
                 className="h-9 w-full appearance-none rounded-md border border-input bg-background pl-3 pr-8 text-xs outline-none focus:ring-2 focus:ring-ring min-[480px]:w-48"
               >
                 <option>All roles</option>
-                {EMPLOYEE_ROLES.map((employeeRole) => (
+                {EMPLOYEE_ROLES.filter((employeeRole) => employeeRole !== "Business Owner").map((employeeRole) => (
                   <option key={employeeRole}>{employeeRole}</option>
                 ))}
               </select>
@@ -301,26 +339,27 @@ export function EmployeesPage() {
                 ))}
               </select>
             </label>
-            <label className="block space-y-1.5 text-xs font-medium">
+            {role !== "Business Administrator" && <label className="block space-y-1.5 text-xs font-medium">
               Branch
               <select
+                required
                 value={branch}
                 onChange={(event) => setBranch(event.target.value)}
                 className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
               >
-                {DEMO_BRANCHES.map((branchOption) => (
-                  <option key={branchOption.id}>{branchOption.name}</option>
+                <option value="">Select a branch</option>
+                {branches.map((branchOption) => (
+                  <option key={branchOption.id} value={branchOption.id}>{branchOption.name}</option>
                 ))}
-                <option>All branches</option>
               </select>
-            </label>
+            </label>}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit">
+              <Button type="submit" disabled={saving || !businessId}>
                 <MailPlus className="size-4" />
-                Add member
+                {saving ? "Creating invitation…" : "Create invitation link"}
               </Button>
             </DialogFooter>
           </form>
