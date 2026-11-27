@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
+import { apiClient } from "@/services/api-client";
 
 const navigation: {
   label: string;
@@ -35,6 +36,7 @@ const navigation: {
 ] as const;
 
 type AuthStatus = "checking" | "authenticated" | "unauthenticated" | "error";
+type PrimaryRole = "platform_admin" | "owner" | "admin" | "manager" | "staff" | "unassigned";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (state) => state.location.pathname });
@@ -44,6 +46,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [authStatus, setAuthStatus] = useState<AuthStatus>("checking");
   const [accountLabel, setAccountLabel] = useState("Account");
   const [authError, setAuthError] = useState("");
+  const [role, setRole] = useState<PrimaryRole>("unassigned");
 
   useEffect(() => {
     let active = true;
@@ -71,9 +74,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         void navigate({ to: "/login" });
         return;
       }
-      const metadata = data.session.user.user_metadata as { full_name?: string };
-      setAccountLabel(metadata.full_name || data.session.user.email || "Account");
-      setAuthStatus("authenticated");
+      void resolveAuthorization(data.session.user.user_metadata, data.session.user.email);
     });
 
     const { data: authListener } = client.auth.onAuthStateChange((_event, session) => {
@@ -83,9 +84,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         void navigate({ to: "/login" });
         return;
       }
-      const metadata = session.user.user_metadata as { full_name?: string };
-      setAccountLabel(metadata.full_name || session.user.email || "Account");
-      setAuthStatus("authenticated");
+      void resolveAuthorization(session.user.user_metadata, session.user.email);
     });
 
     return () => {
@@ -94,12 +93,37 @@ export function AppShell({ children }: { children: ReactNode }) {
     };
   }, [navigate]);
 
+  async function resolveAuthorization(metadata: Record<string, unknown>, email?: string) {
+    try {
+      const identity = await apiClient.get<{ user: { full_name: string | null }; authorization: { primary_role: PrimaryRole; requires_onboarding: boolean } }>("/v1/auth/me");
+      if (!active) return;
+      if (identity.authorization.requires_onboarding || identity.authorization.primary_role === "unassigned") {
+        setAuthStatus("authenticated");
+        void navigate({ to: "/onboarding" });
+        return;
+      }
+      if (identity.authorization.primary_role === "platform_admin") {
+        setRole("platform_admin");
+        setAuthStatus("authenticated");
+        setAuthError("Platform administrator access is recognized. The platform administration portal is not yet available.");
+        return;
+      }
+      setRole(identity.authorization.primary_role);
+      setAccountLabel(identity.user.full_name || (typeof metadata.full_name === "string" ? metadata.full_name : email) || "Account");
+      setAuthStatus("authenticated");
+    } catch (error) {
+      if (!active) return;
+      setAuthError(error instanceof Error ? error.message : "Unable to resolve your permissions.");
+      setAuthStatus("error");
+    }
+  }
+
   async function signOut() {
     await getSupabaseBrowserClient().auth.signOut();
     await navigate({ to: "/login" });
   }
 
-  if (authStatus !== "authenticated") {
+  const roleNavigation = navigation.filter((item) => role === "owner" || role === "admin" ? true : role === "manager" ? item.to === "/" || item.to === "/orders" : role === "staff" ? item.to === "/orders" : false);\n\n  useEffect(() => {\n    if (authStatus !== "authenticated" || role === "unassigned" || role === "platform_admin") return;\n    if (!roleNavigation.some((item) => item.to === path)) void navigate({ to: role === "staff" ? "/orders" : "/" });\n  }, [authStatus, role, path, navigate]);\n\n  if (authStatus !== "authenticated") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-6 text-center">
         <div className="max-w-md">
@@ -119,14 +143,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    {role === "platform_admin" && authError ? <div className="flex min-h-screen items-center justify-center p-6 text-center"><div><h1 className="text-lg font-semibold">Platform Admin</h1><p className="mt-2 text-sm text-muted-foreground">{authError}</p><Button className="mt-4" onClick={() => void signOut()}>Sign out</Button></div></div> : <div className="min-h-screen bg-background text-foreground">
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 lg:flex",
           collapsed ? "w-[5.25rem]" : "w-64",
         )}
       >
-        <SidebarContent collapsed={collapsed} path={path} onSignOut={signOut} />
+        <SidebarContent collapsed={collapsed} path={path} navigationItems={roleNavigation} onSignOut={signOut} />
         <Button
           variant="ghost"
           size="icon"
@@ -236,7 +260,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-border bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1 backdrop-blur lg:hidden">
+      <nav className={cn("fixed inset-x-0 bottom-0 z-30 grid border-t border-border bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1 backdrop-blur lg:hidden", roleNavigation.length === 2 ? "grid-cols-2" : roleNavigation.length === 3 ? "grid-cols-3" : "grid-cols-4")} border-t border-border bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1 backdrop-blur lg:hidden">
         {navigation.map(({ label, to, icon: Icon }) => (
           <Link
             key={to}
