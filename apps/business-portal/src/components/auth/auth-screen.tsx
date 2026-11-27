@@ -378,9 +378,12 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
               {mode === "register" && (
                 <>
                   Already have an account?{" "}
-                  <Link to="/login" className="font-semibold text-primary hover:underline">
+                  <a
+                    href={inviteToken ? `/login?invite=${encodeURIComponent(inviteToken)}` : "/login"}
+                    className="font-semibold text-primary hover:underline"
+                  >
                     Sign in
-                  </Link>
+                  </a>
                 </>
               )}
               {mode === "forgot" && (
