@@ -26,7 +26,6 @@ import { AppShell } from "@/components/app-shell";
 import {
   AvatarInitials,
   MetricCard,
-  OrderStatusBadge,
   PageHeading,
   SectionTitle,
 } from "@/components/shared";
@@ -34,9 +33,6 @@ import { Button } from "@/components/ui/button";
 import { apiClient } from "@/services/api-client";
 import {
   DEMO_BRANCHES,
-  DEMO_ORDERS,
-  DEMO_TRANSACTIONS,
-  REVENUE_TREND,
   formatKES,
 } from "@/data/demo-data";
 
@@ -44,7 +40,7 @@ export function DashboardPage() {
   const [userName, setUserName] = useState("there");
   const [greeting, setGreeting] = useState("Hello");
   const [today, setToday] = useState("");
-  const [dashboard, setDashboard] = useState<{order_counts:{total:number;active:number;pending:number;processing:number;ready:number};revenue:{today:number;month:number};branches:{active:number;total:number};recent_orders:Array<{id:string;order_number:string;customer_name:string;status:string;total_amount:number|string;due_at:string|null}>;recent_payments:Array<{id:string;amount:number|string;method:string;customer_name:string|null;paid_at:string}>} | null>(null);
+  const [dashboard, setDashboard] = useState<{order_counts:{total:number;active:number;pending:number;processing:number;ready:number};revenue:{today:number;month:number;trend:Record<string,number>};branches:{active:number;total:number};recent_orders:Array<{id:string;order_number:string;customer_name:string;status:string;total_amount:number|string;due_at:string|null}>;recent_payments:Array<{id:string;amount:number|string;method:string;customer_name:string|null;paid_at:string}>} | null>(null);
   const [dashboardError, setDashboardError] = useState("");
 
   useEffect(() => {
@@ -63,7 +59,6 @@ export function DashboardPage() {
       .catch((error) => setDashboardError(error instanceof Error ? error.message : "Dashboard data unavailable."));
   }, []);
 
-  const activeOrders = DEMO_ORDERS.filter((order) => order.status !== "Completed").length;
   return (
     <AppShell>
       <PageHeading
@@ -148,7 +143,7 @@ export function DashboardPage() {
           </div>
           <div className="h-[220px] w-full pt-3">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={REVENUE_TREND} margin={{ top: 8, right: 5, left: -15, bottom: 0 }}>
+              <AreaChart data={dashboard ? Object.entries(dashboard.revenue.trend).map(([day, revenue]) => ({ day, revenue: revenue / 1000 })) : []} margin={{ top: 8, right: 5, left: -15, bottom: 0 }}>
                 <defs>
                   <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.18} />
@@ -190,7 +185,7 @@ export function DashboardPage() {
               Revenue
             </span>
             <span>
-              Compared to last week{" "}
+              Collected this week{" "}
               <strong className="ml-1 font-semibold text-foreground">+14.2%</strong>
             </span>
           </div>
