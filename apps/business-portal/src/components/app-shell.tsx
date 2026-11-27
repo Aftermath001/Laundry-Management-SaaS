@@ -127,7 +127,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (authStatus !== "authenticated" || role === "unassigned" || role === "platform_admin") return;
     if (!roleNavigation.some((item) => item.to === path)) void navigate({ to: role === "staff" ? "/orders" : "/" });
   }, [authStatus, role, path, navigate]);
-\n  if (authStatus !== "authenticated") {
+
+  if (authStatus !== "authenticated") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-6 text-center">
         <div className="max-w-md">
