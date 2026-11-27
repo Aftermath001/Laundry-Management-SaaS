@@ -72,19 +72,84 @@ export async function buildApp() {
     version: "1.0.0",
   }));
 
-  // Authenticated user endpoint
+  // Authenticated identity and server-resolved authorization context.
   app.get(
     "/api/v1/auth/me",
-    {
-      preHandler: [app.authenticate],
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      if (!request.supabase || !request.user) {
+        return reply.code(401).send({
+          success: false,
+          message: "Authentication required.",
+        });
+      }
+
+      const [adminResult, membershipsResult, assignmentsResult] =
+        await Promise.all([
+          request.supabase
+            .from("platform_admins")
+            .select("user_id")
+            .eq("user_id", request.user.id)
+            .maybeSingle(),
+          request.supabase
+            .from("business_members")
+            .select("business_id, role, status")
+            .eq("user_id", request.user.id)
+            .eq("status", "active"),
+          request.supabase
+            .from("branch_members")
+            .select("business_id, branch_id, status")
+            .eq("user_id", request.user.id)
+            .eq("status", "active"),
+        ]);
+
+      const queryError =
+        adminResult.error || membershipsResult.error || assignmentsResult.error;
+
+      if (queryError) {
+        request.log.error(queryError);
+        return reply.code(500).send({
+          success: false,
+          message: "Unable to load your account permissions.",
+        });
+      }
+
+      const isPlatformAdmin = Boolean(adminResult.data);
+      const memberships = membershipsResult.data ?? [];
+      const branchAssignments = assignmentsResult.data ?? [];
+
+      const primaryRole = isPlatformAdmin
+        ? "platform_admin"
+        : memberships.some((item) => item.role === "owner")
+          ? "owner"
+          : memberships.some((item) => item.role === "admin")
+            ? "admin"
+            : memberships.some((item) => item.role === "manager")
+              ? "manager"
+              : memberships.some((item) => item.role === "staff")
+                ? "staff"
+                : "unassigned";
+
+      return {
+        success: true,
+        user: {
+          id: request.user.id,
+          email: request.user.email,
+          full_name:
+            typeof request.user.user_metadata?.full_name === "string"
+              ? request.user.user_metadata.full_name
+              : null,
+        },
+        authorization: {
+          primary_role: primaryRole,
+          is_platform_admin: isPlatformAdmin,
+          memberships,
+          branch_assignments: branchAssignments,
+          requires_onboarding:
+            !isPlatformAdmin && memberships.length === 0,
+        },
+      };
     },
-    async (request) => ({
-      success: true,
-      user: {
-        id: request.user!.id,
-        email: request.user!.email,
-      },
-    }),
   );
 
   // Supabase health check
