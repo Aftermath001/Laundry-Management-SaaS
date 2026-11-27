@@ -44,7 +44,8 @@ declare
   current_email text;
 begin
   if current_user_id is null then raise exception 'Authentication required'; end if;
-  select lower(u.email) into current_email from auth.users u where u.id = current_user_id;
+  select lower(u.email) into current_email from auth.users u
+    where u.id = current_user_id and u.email_confirmed_at is not null;
   if current_email is null then raise exception 'A verified account email is required'; end if;
   select * into invitation from public.business_invitations bi
     where bi.token_hash = invitation_token_hash for update;
