@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   Activity,
   ArrowRight,
@@ -30,6 +31,7 @@ import {
   SectionTitle,
 } from "@/components/shared";
 import { Button } from "@/components/ui/button";
+import { apiClient } from "@/services/api-client";
 import {
   DEMO_BRANCHES,
   DEMO_ORDERS,
@@ -39,12 +41,26 @@ import {
 } from "@/data/demo-data";
 
 export function DashboardPage() {
+  const [userName, setUserName] = useState("there");
+  const [greeting, setGreeting] = useState("Hello");
+  const [today, setToday] = useState("");
+
+  useEffect(() => {
+    const now = new Date();
+    const hour = now.getHours();
+    setGreeting(hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening");
+    setToday(now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" }));
+    apiClient.get<{ user: { full_name: string | null } }>("/v1/auth/me")
+      .then((identity) => setUserName(identity.user.full_name?.trim() || "there"))
+      .catch(() => setUserName("there"));
+  }, []);
+
   const activeOrders = DEMO_ORDERS.filter((order) => order.status !== "Completed").length;
   return (
     <AppShell>
       <PageHeading
-        eyebrow="Monday, 23 November 2026"
-        title="Good morning, Alex"
+        eyebrow={today}
+        title={`${greeting}, ${userName}`}
         description="Here's what's happening across your laundry business today."
         action={
           <>
