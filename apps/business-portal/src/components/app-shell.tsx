@@ -148,7 +148,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    {role === "platform_admin" && authError ? <div className="flex min-h-screen items-center justify-center p-6 text-center"><div><h1 className="text-lg font-semibold">Platform Admin</h1><p className="mt-2 text-sm text-muted-foreground">{authError}</p><Button className="mt-4" onClick={() => void signOut()}>Sign out</Button></div></div> : <div className="min-h-screen bg-background text-foreground">
+    <>
+      {role === "platform_admin" && authError ? <div className="flex min-h-screen items-center justify-center p-6 text-center"><div><h1 className="text-lg font-semibold">Platform Admin</h1><p className="mt-2 text-sm text-muted-foreground">{authError}</p><Button className="mt-4" onClick={() => void signOut()}>Sign out</Button></div></div> : <div className="min-h-screen bg-background text-foreground">
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 lg:flex",
@@ -282,18 +283,21 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
         ))}
       </nav>
-    </div>
+    </div>}
+    </>
   );
 }
 
 function SidebarContent({
   collapsed = false,
   path,
+  navigationItems,
   onNavigate,
   onSignOut,
 }: {
   collapsed?: boolean;
   path: string;
+  navigationItems: typeof navigation;
   onNavigate?: () => void;
   onSignOut: () => void | Promise<void>;
 }) {
@@ -326,7 +330,7 @@ function SidebarContent({
           </p>
         )}
         <div className="space-y-1">
-          {navigation.map(({ label, to, icon: Icon, count }) => {
+          {navigationItems.map(({ label, to, icon: Icon, count }) => {
             const active = path === to;
             return (
               <Link
