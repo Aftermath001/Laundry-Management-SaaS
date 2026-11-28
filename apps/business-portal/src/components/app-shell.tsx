@@ -25,13 +25,14 @@ import { apiClient } from "@/services/api-client";
 
 const navigation: {
   label: string;
-  to: "/" | "/orders" | "/branches" | "/employees";
+  to: "/" | "/orders" | "/branches" | "/employees" | "/services";
   icon: LucideIcon;
   count?: string;
 }[] = [
   { label: "Overview", to: "/", icon: LayoutDashboard },
   { label: "Orders", to: "/orders", icon: Shirt, count: "18" },
   { label: "Branches", to: "/branches", icon: Store },
+  { label: "Services", to: "/services", icon: PackageCheck },
   { label: "Team", to: "/employees", icon: UsersRound },
 ] as const;
 
@@ -267,7 +268,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </main>
       </div>
 
-      <nav className={cn("fixed inset-x-0 bottom-0 z-30 grid border-t border-border bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1 backdrop-blur lg:hidden", roleNavigation.length === 2 ? "grid-cols-2" : roleNavigation.length === 3 ? "grid-cols-3" : "grid-cols-4")}>
+      <nav className={cn("fixed inset-x-0 bottom-0 z-30 grid border-t border-border bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1 backdrop-blur lg:hidden", roleNavigation.length >= 5 ? "grid-cols-5" : roleNavigation.length === 4 ? "grid-cols-4" : roleNavigation.length === 3 ? "grid-cols-3" : "grid-cols-2")}>
         {roleNavigation.map(({ label, to, icon: Icon }) => (
           <Link
             key={to}
@@ -375,14 +376,6 @@ function SidebarContent({
         )}
         {!collapsed && (
           <div className="space-y-1">
-            <div
-              className="flex h-10 cursor-not-allowed items-center gap-3 rounded-md px-3 text-[13px] text-sidebar-foreground/40"
-              title="Coming soon"
-            >
-              <PackageCheck className="size-[17px]" />
-              <span className="flex-1">Services</span>
-              <span className="text-[9px] uppercase tracking-wide">Soon</span>
-            </div>
             <div
               className="flex h-10 cursor-not-allowed items-center gap-3 rounded-md px-3 text-[13px] text-sidebar-foreground/40"
               title="Coming soon"
