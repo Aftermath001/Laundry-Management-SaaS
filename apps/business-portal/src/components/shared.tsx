@@ -75,7 +75,7 @@ export function MetricCard({
   );
 }
 
-const statusClasses: Record<OrderStatus, string> = {
+const statusClasses: Record<OrderStatus | "Pending" | "Ready for collection" | "Delivered" | "Cancelled", string> = {
   Created: "border-border bg-muted text-muted-foreground",
   Confirmed: "border-primary/20 bg-primary/10 text-primary",
   "Laundry Received": "border-chart-2/25 bg-chart-2/10 text-chart-2",
