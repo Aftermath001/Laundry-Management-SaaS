@@ -55,10 +55,11 @@ begin
     raise exception 'Customer name and phone are required' using errcode = '22023';
   end if;
 
-  if p_items is null
-     or jsonb_typeof(p_items) is distinct from 'array'
-     or jsonb_array_length(p_items) < 1
-     or jsonb_array_length(p_items) > 50 then
+  if p_items is null or jsonb_typeof(p_items) is distinct from 'array' then
+    raise exception 'Order items must be provided as an array' using errcode = '22023';
+  end if;
+
+  if jsonb_array_length(p_items) < 1 or jsonb_array_length(p_items) > 50 then
     raise exception 'An order must contain between 1 and 50 items' using errcode = '22023';
   end if;
 
@@ -123,3 +124,78 @@ revoke all on function public.create_laundry_order(
 grant execute on function public.create_laundry_order(
   uuid, uuid, text, text, jsonb, timestamptz, text
 ) to authenticated;
+
+
+-- Normalize branch-scoped policies to the composite business/branch access helper.
+drop policy if exists "Members with branch access can view orders"
+  on public.laundry_orders;
+create policy "Members with branch access can view orders"
+  on public.laundry_orders
+  for select to authenticated
+  using (
+    public.is_business_member(business_id)
+    and public.can_access_branch(business_id, branch_id)
+  );
+
+drop policy if exists "Owners admins and branch members can create orders"
+  on public.laundry_orders;
+create policy "Owners admins and branch members can create orders"
+  on public.laundry_orders
+  for insert to authenticated
+  with check (
+    public.is_business_member(business_id)
+    and public.can_access_branch(business_id, branch_id)
+  );
+
+drop policy if exists "Owners admins and branch members can update orders"
+  on public.laundry_orders;
+create policy "Owners admins and branch members can update orders"
+  on public.laundry_orders
+  for update to authenticated
+  using (
+    public.is_business_member(business_id)
+    and public.can_access_branch(business_id, branch_id)
+  )
+  with check (
+    public.is_business_member(business_id)
+    and public.can_access_branch(business_id, branch_id)
+  );
+
+drop policy if exists "Members with branch access can view order items"
+  on public.laundry_order_items;
+create policy "Members with branch access can view order items"
+  on public.laundry_order_items
+  for select to authenticated
+  using (
+    public.is_business_member(business_id)
+    and exists (
+      select 1
+      from public.laundry_orders orders
+      where orders.id = laundry_order_items.order_id
+        and orders.business_id = laundry_order_items.business_id
+        and public.can_access_branch(orders.business_id, orders.branch_id)
+    )
+  );
+
+drop policy if exists "Members with branch access can add order items"
+  on public.laundry_order_items;
+create policy "Members with branch access can add order items"
+  on public.laundry_order_items
+  for insert to authenticated
+  with check (
+    public.is_business_member(business_id)
+    and exists (
+      select 1
+      from public.laundry_orders orders
+      where orders.id = laundry_order_items.order_id
+        and orders.business_id = laundry_order_items.business_id
+        and public.can_access_branch(orders.business_id, orders.branch_id)
+    )
+    and exists (
+      select 1
+      from public.laundry_services services
+      where services.id = laundry_order_items.service_id
+        and services.business_id = laundry_order_items.business_id
+        and services.is_active = true
+    )
+  );
