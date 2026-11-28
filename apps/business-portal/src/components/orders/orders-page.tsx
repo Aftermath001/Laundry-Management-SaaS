@@ -184,8 +184,8 @@ export function OrdersPage() {
         `/v1/businesses/${business.id}/orders/${order.id}/status`,
         { status },
       );
-      setOrders((current) => current.map((item) => item.id === order.id ? response.order : item));
-      setDetail((current) => current?.id === order.id ? { ...current, ...response.order } : current);
+      setOrders((current) => current.map((item) => item.id === order.id ? { ...item, ...response.order, items: item.items } : item));
+      setDetail((current) => current?.id === order.id ? { ...current, ...response.order, items: current.items } : current);
       toast.success(`${order.order_number} updated to ${statusLabel(status)}.`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to update order status.");
