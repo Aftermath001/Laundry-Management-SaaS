@@ -85,9 +85,13 @@ const statusClasses: Record<OrderStatus, string> = {
   "Out for Delivery": "border-chart-5/20 bg-chart-5/10 text-chart-5",
   Collected: "border-border bg-muted text-muted-foreground",
   Completed: "border-success/20 bg-success/10 text-success",
+  Pending: "border-border bg-muted text-muted-foreground",
+  "Ready for collection": "border-success/20 bg-success/10 text-success",
+  Delivered: "border-success/20 bg-success/10 text-success",
+  Cancelled: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
-export function OrderStatusBadge({ status }: { status: OrderStatus }) {
+export function OrderStatusBadge({ status }: { status: OrderStatus | "Pending" | "Ready for collection" | "Delivered" | "Cancelled" }) {
   return (
     <Badge
       variant="outline"
