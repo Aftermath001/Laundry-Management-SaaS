@@ -49,7 +49,7 @@ const statusOptions: { value: ApiStatus; label: string }[] = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
-const statusLabel = (status: ApiStatus) =>
+const statusLabel = (status: ApiStatus): "Pending" | "Processing" | "Ready for collection" | "Collected" | "Delivered" | "Cancelled" =>
   statusOptions.find((item) => item.value === status)?.label ?? status;
 
 const dateTime = (value: string | null) => {
@@ -311,7 +311,7 @@ export function OrdersPage() {
                         className="max-w-[155px] cursor-pointer appearance-none bg-transparent text-xs outline-none disabled:opacity-50">
                         {statusOptions.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
                       </select>
-                      <div className="mt-1"><OrderStatusBadge status={statusLabel(order.status) as never} /></div>
+                      <div className="mt-1"><OrderStatusBadge status={statusLabel(order.status)} /></div>
                     </td>
                     <td className="whitespace-nowrap px-3 py-3.5 text-right text-xs font-semibold">{formatKES(Number(order.total_amount))}</td>
                     <td className="px-5 py-3.5 text-right"><Button variant="ghost" size="icon" aria-label={`View details for ${order.order_number}`}
@@ -385,7 +385,7 @@ export function OrdersPage() {
                 <div className="space-y-2">{detail.items.map((item) => <div key={item.id} className="flex justify-between gap-3"><span>{item.service_name} · {item.quantity} {item.unit} × {formatKES(Number(item.unit_price))}</span><strong>{formatKES(Number(item.line_total))}</strong></div>)}</div>
               </div>
               {detail.notes && <div className="col-span-2"><p className="text-muted-foreground">Notes</p><p className="mt-1">{detail.notes}</p></div>}
-              <div className="col-span-2"><p className="mb-1.5 text-muted-foreground">Current status</p><OrderStatusBadge status={statusLabel(detail.status) as never} /></div>
+              <div className="col-span-2"><p className="mb-1.5 text-muted-foreground">Current status</p><OrderStatusBadge status={statusLabel(detail.status)} /></div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => window.print()}><Printer className="size-4" /> Print</Button>
