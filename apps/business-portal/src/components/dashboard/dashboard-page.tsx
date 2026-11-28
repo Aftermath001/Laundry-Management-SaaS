@@ -23,12 +23,7 @@ import {
   YAxis,
 } from "recharts";
 import { AppShell } from "@/components/app-shell";
-import {
-  AvatarInitials,
-  MetricCard,
-  PageHeading,
-  SectionTitle,
-} from "@/components/shared";
+import { AvatarInitials, MetricCard, PageHeading, SectionTitle } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/services/api-client";
 import { formatKES } from "@/data/demo-data";
@@ -37,23 +32,69 @@ export function DashboardPage() {
   const [userName, setUserName] = useState("there");
   const [greeting, setGreeting] = useState("Hello");
   const [today, setToday] = useState("");
-  const [dashboard, setDashboard] = useState<{order_counts:{total:number;active:number;pending:number;processing:number;ready:number};revenue:{today:number;month:number;trend:Record<string,number>};branches:{active:number;total:number;performance:Array<{id:string;name:string;orders:number;revenue:number}>};recent_orders:Array<{id:string;order_number:string;customer_name:string;status:string;total_amount:number|string;due_at:string|null}>;recent_payments:Array<{id:string;amount:number|string;method:string;customer_name:string|null;paid_at:string}>} | null>(null);
+  const [dashboard, setDashboard] = useState<{
+    order_counts: {
+      total: number;
+      active: number;
+      pending: number;
+      processing: number;
+      ready: number;
+    };
+    revenue: { today: number; month: number; trend: Record<string, number> };
+    branches: {
+      active: number;
+      total: number;
+      performance: Array<{ id: string; name: string; orders: number; revenue: number }>;
+    };
+    recent_orders: Array<{
+      id: string;
+      order_number: string;
+      customer_name: string;
+      status: string;
+      total_amount: number | string;
+      due_at: string | null;
+    }>;
+    recent_payments: Array<{
+      id: string;
+      amount: number | string;
+      method: string;
+      customer_name: string | null;
+      paid_at: string;
+    }>;
+  } | null>(null);
   const [dashboardError, setDashboardError] = useState("");
 
   useEffect(() => {
     const now = new Date();
     const hour = now.getHours();
     setGreeting(hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening");
-    setToday(now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" }));
-    apiClient.get<{ user: { full_name: string | null }; authorization: { memberships: Array<{ business_id:string;role:string }> } }>("/v1/auth/me")
+    setToday(
+      now.toLocaleDateString(undefined, {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+    );
+    apiClient
+      .get<{
+        user: { full_name: string | null };
+        authorization: { memberships: Array<{ business_id: string; role: string }> };
+      }>("/v1/auth/me")
       .then(async (identity) => {
         setUserName(identity.user.full_name?.trim() || "there");
-        const membership=identity.authorization.memberships.find((item)=>item.role==="admin"||item.role==="owner");
-        if(!membership) return;
-        const response=await apiClient.get<{dashboard:NonNullable<typeof dashboard>}>(`/v1/businesses/${membership.business_id}/dashboard`);
+        const membership = identity.authorization.memberships.find(
+          (item) => item.role === "admin" || item.role === "owner",
+        );
+        if (!membership) return;
+        const response = await apiClient.get<{ dashboard: NonNullable<typeof dashboard> }>(
+          `/v1/businesses/${membership.business_id}/dashboard`,
+        );
         setDashboard(response.dashboard);
       })
-      .catch((error) => setDashboardError(error instanceof Error ? error.message : "Dashboard data unavailable."));
+      .catch((error) =>
+        setDashboardError(error instanceof Error ? error.message : "Dashboard data unavailable."),
+      );
   }, []);
 
   return (
@@ -83,29 +124,55 @@ export function DashboardPage() {
       <div className="mb-6 grid grid-cols-1 gap-3 min-[540px]:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Total revenue"
-          value={dashboard ? formatKES(dashboard.revenue.month) : dashboardError ? "Unavailable" : "Loading…"}
+          value={
+            dashboard
+              ? formatKES(dashboard.revenue.month)
+              : dashboardError
+                ? "Unavailable"
+                : "Loading…"
+          }
           change="12.8%"
           note="vs. last month"
           icon={Wallet}
         />
         <MetricCard
           label="Total orders"
-          value={dashboard ? dashboard.order_counts.total.toLocaleString() : dashboardError ? "Unavailable" : "Loading…"}
+          value={
+            dashboard
+              ? dashboard.order_counts.total.toLocaleString()
+              : dashboardError
+                ? "Unavailable"
+                : "Loading…"
+          }
           change="8.2%"
           note="vs. last month"
           icon={Shirt}
         />
         <MetricCard
           label="Pending orders"
-          value={dashboard ? dashboard.order_counts.active.toLocaleString() : dashboardError ? "Unavailable" : "Loading…"}
+          value={
+            dashboard
+              ? dashboard.order_counts.active.toLocaleString()
+              : dashboardError
+                ? "Unavailable"
+                : "Loading…"
+          }
           change="4.6%"
           positive={false}
-          note={dashboard ? `${dashboard.order_counts.ready} ready for collection` : "Live order data"}
+          note={
+            dashboard ? `${dashboard.order_counts.ready} ready for collection` : "Live order data"
+          }
           icon={Activity}
         />
         <MetricCard
           label="Active branches"
-          value={dashboard ? dashboard.branches.active.toLocaleString() : dashboardError ? "Unavailable" : "Loading…"}
+          value={
+            dashboard
+              ? dashboard.branches.active.toLocaleString()
+              : dashboardError
+                ? "Unavailable"
+                : "Loading…"
+          }
           change="1 new"
           note={dashboard ? `${dashboard.branches.total} registered branches` : "Live branch data"}
           icon={Store}
@@ -117,9 +184,7 @@ export function DashboardPage() {
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div>
               <SectionTitle title="Revenue collected today" />
-              <p className="-mt-3 text-xs text-muted-foreground">
-                Revenue collected today
-              </p>
+              <p className="-mt-3 text-xs text-muted-foreground">Revenue collected today</p>
             </div>
             <select
               aria-label="Revenue period"
@@ -132,7 +197,13 @@ export function DashboardPage() {
             </select>
           </div>
           <div className="mb-1 flex items-baseline gap-2">
-            <span className="text-2xl font-semibold tracking-tight">{dashboard ? formatKES(dashboard.revenue.today) : dashboardError ? "Unavailable" : "Loading…"}</span>
+            <span className="text-2xl font-semibold tracking-tight">
+              {dashboard
+                ? formatKES(dashboard.revenue.today)
+                : dashboardError
+                  ? "Unavailable"
+                  : "Loading…"}
+            </span>
             <span className="inline-flex items-center text-[11px] font-semibold text-success">
               <ArrowUpRight className="size-3" />
               14.2%
@@ -140,7 +211,17 @@ export function DashboardPage() {
           </div>
           <div className="h-[220px] w-full pt-3">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={dashboard ? Object.entries(dashboard.revenue.trend).map(([day, revenue]) => ({ day, revenue: revenue / 1000 })) : []} margin={{ top: 8, right: 5, left: -15, bottom: 0 }}>
+              <AreaChart
+                data={
+                  dashboard
+                    ? Object.entries(dashboard.revenue.trend).map(([day, revenue]) => ({
+                        day,
+                        revenue: revenue / 1000,
+                      }))
+                    : []
+                }
+                margin={{ top: 8, right: 5, left: -15, bottom: 0 }}
+              >
                 <defs>
                   <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.18} />
@@ -200,9 +281,24 @@ export function DashboardPage() {
           <p className="-mt-2 text-xs text-muted-foreground">Live orders by status</p>
           <div className="mt-6 space-y-5">
             {[
-              { label: "Processing", value: dashboard?.order_counts.processing ?? 0, total: Math.max(dashboard?.order_counts.active ?? 0,1), color: "bg-primary" },
-              { label: "Ready for collection", value: dashboard?.order_counts.ready ?? 0, total: Math.max(dashboard?.order_counts.active ?? 0,1), color: "bg-success" },
-              { label: "Pending", value: dashboard?.order_counts.pending ?? 0, total: Math.max(dashboard?.order_counts.active ?? 0,1), color: "bg-chart-3" },
+              {
+                label: "Processing",
+                value: dashboard?.order_counts.processing ?? 0,
+                total: Math.max(dashboard?.order_counts.active ?? 0, 1),
+                color: "bg-primary",
+              },
+              {
+                label: "Ready for collection",
+                value: dashboard?.order_counts.ready ?? 0,
+                total: Math.max(dashboard?.order_counts.active ?? 0, 1),
+                color: "bg-success",
+              },
+              {
+                label: "Pending",
+                value: dashboard?.order_counts.pending ?? 0,
+                total: Math.max(dashboard?.order_counts.active ?? 0, 1),
+                color: "bg-chart-3",
+              },
             ].map((item) => (
               <div key={item.label}>
                 <div className="mb-2 flex justify-between text-xs">
@@ -265,12 +361,19 @@ export function DashboardPage() {
                     key={order.id}
                     className="border-b border-border last:border-0 hover:bg-muted/40"
                   >
-                    <td className="px-5 py-3.5 text-xs font-semibold text-primary">{order.order_number}</td>
+                    <td className="px-5 py-3.5 text-xs font-semibold text-primary">
+                      {order.order_number}
+                    </td>
                     <td className="px-3 py-3.5">
                       <div className="flex items-center gap-2.5">
                         <AvatarInitials
                           name={order.customer_name}
-                          initials={order.customer_name.split(" ").map((part)=>part[0]).join("").slice(0,2).toUpperCase()}
+                          initials={order.customer_name
+                            .split(" ")
+                            .map((part) => part[0])
+                            .join("")
+                            .slice(0, 2)
+                            .toUpperCase()}
                           className="size-7 text-[9px]"
                         />
                         <span className="whitespace-nowrap text-xs font-medium">
@@ -282,7 +385,9 @@ export function DashboardPage() {
                       {order.due_at ? new Date(order.due_at).toLocaleString() : "Not set"}
                     </td>
                     <td className="px-3 py-3.5">
-                      <span className="text-xs capitalize">{order.status.replaceAll("_"," ")}</span>
+                      <span className="text-xs capitalize">
+                        {order.status.replaceAll("_", " ")}
+                      </span>
                     </td>
                     <td className="whitespace-nowrap px-5 py-3.5 text-right text-xs font-semibold">
                       {formatKES(Number(order.total_amount))}
@@ -308,7 +413,10 @@ export function DashboardPage() {
             </div>
             <div className="space-y-4">
               {(dashboard?.branches.performance ?? []).slice(0, 3).map((branch) => {
-                const highestRevenue = Math.max(...(dashboard?.branches.performance ?? []).map((item) => item.revenue), 1);
+                const highestRevenue = Math.max(
+                  ...(dashboard?.branches.performance ?? []).map((item) => item.revenue),
+                  1,
+                );
                 return (
                   <div key={branch.id} className="flex items-center gap-3">
                     <span className="grid size-9 shrink-0 place-items-center rounded-md bg-secondary text-secondary-foreground">
@@ -352,7 +460,9 @@ export function DashboardPage() {
                     <Droplets className="size-4" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-semibold">{transaction.customer_name || "Customer"}</p>
+                    <p className="truncate text-xs font-semibold">
+                      {transaction.customer_name || "Customer"}
+                    </p>
                     <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
                       {transaction.method} · {new Date(transaction.paid_at).toLocaleTimeString()}
                     </p>

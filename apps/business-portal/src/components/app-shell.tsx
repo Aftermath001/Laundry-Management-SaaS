@@ -96,8 +96,14 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   async function resolveAuthorization(metadata: Record<string, unknown>, email?: string) {
     try {
-      const identity = await apiClient.get<{ user: { full_name: string | null }; authorization: { primary_role: PrimaryRole; requires_onboarding: boolean } }>("/v1/auth/me");
-      if (identity.authorization.requires_onboarding || identity.authorization.primary_role === "unassigned") {
+      const identity = await apiClient.get<{
+        user: { full_name: string | null };
+        authorization: { primary_role: PrimaryRole; requires_onboarding: boolean };
+      }>("/v1/auth/me");
+      if (
+        identity.authorization.requires_onboarding ||
+        identity.authorization.primary_role === "unassigned"
+      ) {
         setAuthStatus("authenticated");
         void navigate({ to: "/onboarding" });
         return;
@@ -105,11 +111,17 @@ export function AppShell({ children }: { children: ReactNode }) {
       if (identity.authorization.primary_role === "platform_admin") {
         setRole("platform_admin");
         setAuthStatus("authenticated");
-        setAuthError("Platform administrator access is recognized. The platform administration portal is not yet available.");
+        setAuthError(
+          "Platform administrator access is recognized. The platform administration portal is not yet available.",
+        );
         return;
       }
       setRole(identity.authorization.primary_role);
-      setAccountLabel(identity.user.full_name || (typeof metadata.full_name === "string" ? metadata.full_name : email) || "Account");
+      setAccountLabel(
+        identity.user.full_name ||
+          (typeof metadata.full_name === "string" ? metadata.full_name : email) ||
+          "Account",
+      );
       setAuthStatus("authenticated");
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Unable to resolve your permissions.");
@@ -122,11 +134,21 @@ export function AppShell({ children }: { children: ReactNode }) {
     await navigate({ to: "/login" });
   }
 
-  const roleNavigation = navigation.filter((item) => role === "owner" || role === "admin" ? true : role === "manager" ? item.to === "/" || item.to === "/orders" : role === "staff" ? item.to === "/orders" : false);
+  const roleNavigation = navigation.filter((item) =>
+    role === "owner" || role === "admin"
+      ? true
+      : role === "manager"
+        ? item.to === "/" || item.to === "/orders"
+        : role === "staff"
+          ? item.to === "/orders"
+          : false,
+  );
 
   useEffect(() => {
-    if (authStatus !== "authenticated" || role === "unassigned" || role === "platform_admin") return;
-    if (!roleNavigation.some((item) => item.to === path)) void navigate({ to: role === "staff" ? "/orders" : "/" });
+    if (authStatus !== "authenticated" || role === "unassigned" || role === "platform_admin")
+      return;
+    if (!roleNavigation.some((item) => item.to === path))
+      void navigate({ to: role === "staff" ? "/orders" : "/" });
   }, [authStatus, role, path, navigate]);
 
   if (authStatus !== "authenticated") {
@@ -150,141 +172,171 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <>
-      {role === "platform_admin" && authError ? <div className="flex min-h-screen items-center justify-center p-6 text-center"><div><h1 className="text-lg font-semibold">Platform Admin</h1><p className="mt-2 text-sm text-muted-foreground">{authError}</p><Button className="mt-4" onClick={() => void signOut()}>Sign out</Button></div></div> : <div className="min-h-screen bg-background text-foreground">
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 lg:flex",
-          collapsed ? "w-[5.25rem]" : "w-64",
-        )}
-      >
-        <SidebarContent collapsed={collapsed} path={path} navigationItems={roleNavigation} onSignOut={signOut} />
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          onClick={() => setCollapsed((current) => !current)}
-          className="absolute -right-3 top-[5.3rem] size-7 rounded-full border border-border bg-card text-muted-foreground shadow-sm hover:text-foreground"
-        >
-          {collapsed ? <ChevronRight /> : <ChevronLeft />}
-        </Button>
-      </aside>
-
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-foreground/30 lg:hidden"
-          onClick={() => setMobileOpen(false)}
-        >
+      {role === "platform_admin" && authError ? (
+        <div className="flex min-h-screen items-center justify-center p-6 text-center">
+          <div>
+            <h1 className="text-lg font-semibold">Platform Admin</h1>
+            <p className="mt-2 text-sm text-muted-foreground">{authError}</p>
+            <Button className="mt-4" onClick={() => void signOut()}>
+              Sign out
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="min-h-screen bg-background text-foreground">
           <aside
-            className="flex h-full w-[min(19rem,84vw)] flex-col bg-sidebar text-sidebar-foreground"
-            onClick={(event) => event.stopPropagation()}
+            className={cn(
+              "fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 lg:flex",
+              collapsed ? "w-[5.25rem]" : "w-64",
+            )}
           >
-            <div className="flex justify-end p-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Close navigation"
-                onClick={() => setMobileOpen(false)}
-                className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              >
-                <X />
-              </Button>
-            </div>
             <SidebarContent
+              collapsed={collapsed}
               path={path}
               navigationItems={roleNavigation}
-              onNavigate={() => setMobileOpen(false)}
               onSignOut={signOut}
             />
-          </aside>
-        </div>
-      )}
-
-      <div
-        className={cn(
-          "min-h-screen transition-[padding] duration-200",
-          collapsed ? "lg:pl-[5.25rem]" : "lg:pl-64",
-        )}
-      >
-        <header className="sticky top-0 z-30 flex h-[4.25rem] items-center gap-3 border-b border-border bg-card/95 px-4 backdrop-blur sm:px-7">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Open navigation"
-            onClick={() => setMobileOpen(true)}
-            className="-ml-2 lg:hidden"
-          >
-            <Menu />
-          </Button>
-          <div className="hidden items-center gap-2 text-sm text-muted-foreground md:flex">
-            <span>LaundryFlow</span>
-            <span className="text-border">/</span>
-            <span className="font-medium text-foreground">
-              {navigation.find((item) => item.to === path)?.label ?? "Overview"}
-            </span>
-          </div>
-          <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            <label className="relative hidden w-56 lg:block">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                aria-label="Search"
-                placeholder="Search anything…"
-                className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm outline-none transition focus:ring-2 focus:ring-ring"
-              />
-              <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-border px-1 text-[10px] text-muted-foreground">
-                ⌘ K
-              </kbd>
-            </label>
             <Button
               variant="ghost"
               size="icon"
-              aria-label="Notifications"
-              className="relative text-muted-foreground"
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              onClick={() => setCollapsed((current) => !current)}
+              className="absolute -right-3 top-[5.3rem] size-7 rounded-full border border-border bg-card text-muted-foreground shadow-sm hover:text-foreground"
             >
-              <Bell />
-              <span className="absolute right-2 top-2 size-1.5 rounded-full bg-primary ring-2 ring-card" />
+              {collapsed ? <ChevronRight /> : <ChevronLeft />}
             </Button>
-            <span className="hidden h-7 w-px bg-border sm:block" />
-            <Button
-              variant="ghost"
-              onClick={() => void signOut()}
-              className="h-9 gap-2 px-1.5 sm:px-2.5"
-              aria-label="Sign out"
-            >
-              <span className="grid size-8 place-items-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
-                {accountLabel.slice(0, 2).toUpperCase()}
-              </span>
-              <span className="hidden text-left sm:block">
-                <span className="block max-w-36 truncate text-xs font-semibold leading-4">
-                  {accountLabel}
-                </span>
-                <span className="block text-[11px] leading-4 text-muted-foreground">Sign out</span>
-              </span>
-              <LogOut className="size-3.5 text-muted-foreground" />
-            </Button>
-          </div>
-        </header>
-        <main className="mx-auto w-full max-w-[1440px] px-4 pb-24 pt-7 sm:px-7 lg:px-9 lg:pb-10">
-          {children}
-        </main>
-      </div>
+          </aside>
 
-      <nav className={cn("fixed inset-x-0 bottom-0 z-30 grid border-t border-border bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1 backdrop-blur lg:hidden", roleNavigation.length >= 5 ? "grid-cols-5" : roleNavigation.length === 4 ? "grid-cols-4" : roleNavigation.length === 3 ? "grid-cols-3" : "grid-cols-2")}>
-        {roleNavigation.map(({ label, to, icon: Icon }) => (
-          <Link
-            key={to}
-            to={to}
-            activeOptions={{ exact: to === "/" }}
+          {mobileOpen && (
+            <div
+              className="fixed inset-0 z-50 bg-foreground/30 lg:hidden"
+              onClick={() => setMobileOpen(false)}
+            >
+              <aside
+                className="flex h-full w-[min(19rem,84vw)] flex-col bg-sidebar text-sidebar-foreground"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="flex justify-end p-3">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Close navigation"
+                    onClick={() => setMobileOpen(false)}
+                    className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  >
+                    <X />
+                  </Button>
+                </div>
+                <SidebarContent
+                  path={path}
+                  navigationItems={roleNavigation}
+                  onNavigate={() => setMobileOpen(false)}
+                  onSignOut={signOut}
+                />
+              </aside>
+            </div>
+          )}
+
+          <div
             className={cn(
-              "flex min-h-14 flex-col items-center justify-center gap-1 text-[10px] font-medium",
-              path === to ? "text-primary" : "text-muted-foreground",
+              "min-h-screen transition-[padding] duration-200",
+              collapsed ? "lg:pl-[5.25rem]" : "lg:pl-64",
             )}
           >
-            <Icon className="size-[18px]" />
-            <span>{label}</span>
-          </Link>
-        ))}
-      </nav>
-    </div>}
+            <header className="sticky top-0 z-30 flex h-[4.25rem] items-center gap-3 border-b border-border bg-card/95 px-4 backdrop-blur sm:px-7">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Open navigation"
+                onClick={() => setMobileOpen(true)}
+                className="-ml-2 lg:hidden"
+              >
+                <Menu />
+              </Button>
+              <div className="hidden items-center gap-2 text-sm text-muted-foreground md:flex">
+                <span>LaundryFlow</span>
+                <span className="text-border">/</span>
+                <span className="font-medium text-foreground">
+                  {navigation.find((item) => item.to === path)?.label ?? "Overview"}
+                </span>
+              </div>
+              <div className="ml-auto flex items-center gap-2 sm:gap-3">
+                <label className="relative hidden w-56 lg:block">
+                  <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    aria-label="Search"
+                    placeholder="Search anything…"
+                    className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm outline-none transition focus:ring-2 focus:ring-ring"
+                  />
+                  <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-border px-1 text-[10px] text-muted-foreground">
+                    ⌘ K
+                  </kbd>
+                </label>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Notifications"
+                  className="relative text-muted-foreground"
+                >
+                  <Bell />
+                  <span className="absolute right-2 top-2 size-1.5 rounded-full bg-primary ring-2 ring-card" />
+                </Button>
+                <span className="hidden h-7 w-px bg-border sm:block" />
+                <Button
+                  variant="ghost"
+                  onClick={() => void signOut()}
+                  className="h-9 gap-2 px-1.5 sm:px-2.5"
+                  aria-label="Sign out"
+                >
+                  <span className="grid size-8 place-items-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
+                    {accountLabel.slice(0, 2).toUpperCase()}
+                  </span>
+                  <span className="hidden text-left sm:block">
+                    <span className="block max-w-36 truncate text-xs font-semibold leading-4">
+                      {accountLabel}
+                    </span>
+                    <span className="block text-[11px] leading-4 text-muted-foreground">
+                      Sign out
+                    </span>
+                  </span>
+                  <LogOut className="size-3.5 text-muted-foreground" />
+                </Button>
+              </div>
+            </header>
+            <main className="mx-auto w-full max-w-[1440px] px-4 pb-24 pt-7 sm:px-7 lg:px-9 lg:pb-10">
+              {children}
+            </main>
+          </div>
+
+          <nav
+            className={cn(
+              "fixed inset-x-0 bottom-0 z-30 grid border-t border-border bg-card/95 px-2 pb-[env(safe-area-inset-bottom)] pt-1 backdrop-blur lg:hidden",
+              roleNavigation.length >= 5
+                ? "grid-cols-5"
+                : roleNavigation.length === 4
+                  ? "grid-cols-4"
+                  : roleNavigation.length === 3
+                    ? "grid-cols-3"
+                    : "grid-cols-2",
+            )}
+          >
+            {roleNavigation.map(({ label, to, icon: Icon }) => (
+              <Link
+                key={to}
+                to={to}
+                activeOptions={{ exact: to === "/" }}
+                className={cn(
+                  "flex min-h-14 flex-col items-center justify-center gap-1 text-[10px] font-medium",
+                  path === to ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                <Icon className="size-[18px]" />
+                <span>{label}</span>
+              </Link>
+            ))}
+          </nav>
+        </div>
+      )}
     </>
   );
 }
