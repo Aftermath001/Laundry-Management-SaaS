@@ -64,7 +64,10 @@ begin
 
   select count(*) into item_count
   from jsonb_to_recordset(p_items) as item(service_id uuid, quantity numeric)
-  where item.service_id is not null and item.quantity > 0;
+  where item.service_id is not null
+    and item.quantity > 0
+    and item.quantity <= 100000
+    and item.quantity = round(item.quantity, 2);
 
   if item_count <> jsonb_array_length(p_items) then
     raise exception 'Each order item requires a valid service and positive quantity' using errcode = '22023';
