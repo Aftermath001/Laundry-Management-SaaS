@@ -132,6 +132,7 @@ export interface FileRouteTypes {
     | '/orders'
     | '/register'
     | '/reset-password'
+    | '/services'
   id:
     | '__root__'
     | '/'
