@@ -49,8 +49,24 @@ const statusOptions: { value: ApiStatus; label: string }[] = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
-const statusLabel = (status: ApiStatus): "Pending" | "Processing" | "Ready for collection" | "Collected" | "Delivered" | "Cancelled" =>
-  statusOptions.find((item) => item.value === status)?.label ?? status;
+type DisplayOrderStatus =
+  | "Pending"
+  | "Processing"
+  | "Ready for collection"
+  | "Collected"
+  | "Delivered"
+  | "Cancelled";
+
+const statusLabels: Record<ApiStatus, DisplayOrderStatus> = {
+  pending: "Pending",
+  processing: "Processing",
+  ready: "Ready for collection",
+  collected: "Collected",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+};
+
+const statusLabel = (status: ApiStatus): DisplayOrderStatus => statusLabels[status];
 
 const dateTime = (value: string | null) => {
   if (!value) return "Not set";
