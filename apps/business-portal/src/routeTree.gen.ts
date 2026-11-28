@@ -93,6 +93,7 @@ export interface FileRoutesByTo {
   '/orders': typeof OrdersRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/services': typeof ServicesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -105,6 +106,7 @@ export interface FileRoutesById {
   '/orders': typeof OrdersRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/services': typeof ServicesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,6 +143,7 @@ export interface FileRouteTypes {
     | '/orders'
     | '/register'
     | '/reset-password'
+    | '/services'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
