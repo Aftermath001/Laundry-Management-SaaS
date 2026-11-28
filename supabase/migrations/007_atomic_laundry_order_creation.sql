@@ -55,7 +55,8 @@ begin
     raise exception 'Customer name and phone are required' using errcode = '22023';
   end if;
 
-  if jsonb_typeof(p_items) <> 'array'
+  if p_items is null
+     or jsonb_typeof(p_items) is distinct from 'array'
      or jsonb_array_length(p_items) < 1
      or jsonb_array_length(p_items) > 50 then
     raise exception 'An order must contain between 1 and 50 items' using errcode = '22023';
