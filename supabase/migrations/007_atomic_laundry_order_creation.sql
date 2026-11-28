@@ -1,3 +1,5 @@
+begin;
+
 -- 007: atomic order creation with server-side pricing and branch authorization
 
 create or replace function public.create_laundry_order(
@@ -199,3 +201,5 @@ create policy "Members with branch access can add order items"
         and services.is_active = true
     )
   );
+
+commit;
