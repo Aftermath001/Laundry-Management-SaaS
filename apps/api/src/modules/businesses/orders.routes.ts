@@ -121,7 +121,7 @@ export async function orderRoutes(app: FastifyInstance) {
       if (branch_id) ordersQuery = ordersQuery.eq("branch_id", branch_id);
       if (search) ordersQuery = ordersQuery.ilike("customer_name", `%${search}%`);
 
-      const { data: orders, error } = await ordersQuery;
+      const { data: orders, error, count } = await ordersQuery;
 
       if (error) {
         request.log.error(error);
@@ -160,8 +160,8 @@ export async function orderRoutes(app: FastifyInstance) {
         pagination: {
           page,
           limit,
-          total: ordersQuery ? (await Promise.resolve(orders?.length ?? 0), undefined) : undefined,
-          total_records: 0,
+          total_records: count ?? 0,
+          total_pages: Math.ceil((count ?? 0) / limit),
         },
       };
     },
