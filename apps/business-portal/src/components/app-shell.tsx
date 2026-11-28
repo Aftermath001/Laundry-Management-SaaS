@@ -119,7 +119,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       setRole(identity.authorization.primary_role);
       setAccountLabel(
         identity.user.full_name ||
-          (typeof metadata.full_name === "string" ? metadata.full_name : email) ||
+          (typeof metadata["full_name"] === "string" ? metadata["full_name"] : email) ||
           "Account",
       );
       setAuthStatus("authenticated");
