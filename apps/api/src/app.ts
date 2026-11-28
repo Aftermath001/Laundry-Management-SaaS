@@ -10,6 +10,7 @@ import { businessRoutes } from "./modules/businesses/businesses.routes";
 import { invitationRoutes } from "./modules/businesses/invitations.routes";
 import { dashboardRoutes } from "./modules/businesses/dashboard.routes";
 import { serviceRoutes } from "./modules/businesses/services.routes";
+import { orderRoutes } from "./modules/businesses/orders.routes";
 
 export async function buildApp() {
   const app = Fastify({
@@ -163,6 +164,7 @@ export async function buildApp() {
   await app.register(invitationRoutes);
   await app.register(dashboardRoutes);
   await app.register(serviceRoutes);
+  await app.register(orderRoutes);
 
   return app;
 }
