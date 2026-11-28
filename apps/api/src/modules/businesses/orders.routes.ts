@@ -370,4 +370,79 @@ export async function orderRoutes(app: FastifyInstance) {
       });
     },
   );
+
+  app.patch(
+    "/api/v1/businesses/:businessId/orders/:orderId/status",
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      const params = orderParamsSchema.safeParse(request.params);
+      const validation = z.object({ status: orderStatusSchema }).safeParse(request.body);
+
+      if (!params.success || !validation.success) {
+        return reply.code(400).send({
+          success: false,
+          message: "Invalid order or status information.",
+          errors: validation.success ? undefined : validation.error.issues,
+        });
+      }
+
+      if (!request.supabase || !request.user) {
+        return reply.code(401).send({
+          success: false,
+          message: "Authentication required.",
+        });
+      }
+
+      const { membership, error: membershipError } = await getMembership(
+        request,
+        params.data.businessId,
+      );
+
+      if (membershipError) {
+        request.log.error(membershipError);
+        return reply.code(500).send({
+          success: false,
+          message: "Unable to verify business membership.",
+        });
+      }
+
+      if (!membership) {
+        return reply.code(403).send({
+          success: false,
+          message: "You do not have access to this business.",
+        });
+      }
+
+      const { data: order, error } = await request.supabase
+        .from("laundry_orders")
+        .update({ status: validation.data.status })
+        .eq("id", params.data.orderId)
+        .eq("business_id", params.data.businessId)
+        .select("*")
+        .maybeSingle();
+
+      if (error) {
+        request.log.error(error);
+        return reply.code(error.code === "42501" ? 403 : 500).send({
+          success: false,
+          message: error.code === "42501"
+            ? "You do not have permission to update this order."
+            : "Unable to update order status.",
+        });
+      }
+
+      if (!order) {
+        return reply.code(404).send({
+          success: false,
+          message: "Order not found or branch access denied.",
+        });
+      }
+
+      return {
+        success: true,
+        message: "Order status updated successfully.",
+        order,
+      };
+    },
+  );
 }
