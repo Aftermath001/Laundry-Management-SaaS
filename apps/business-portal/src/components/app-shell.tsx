@@ -25,13 +25,14 @@ import { apiClient } from "@/services/api-client";
 
 const navigation: {
   label: string;
-  to: "/" | "/orders" | "/branches" | "/employees";
+  to: "/" | "/orders" | "/branches" | "/employees" | "/services";
   icon: LucideIcon;
   count?: string;
 }[] = [
   { label: "Overview", to: "/", icon: LayoutDashboard },
   { label: "Orders", to: "/orders", icon: Shirt, count: "18" },
   { label: "Branches", to: "/branches", icon: Store },
+  { label: "Services", to: "/services", icon: PackageCheck },
   { label: "Team", to: "/employees", icon: UsersRound },
 ] as const;
 
@@ -375,14 +376,6 @@ function SidebarContent({
         )}
         {!collapsed && (
           <div className="space-y-1">
-            <div
-              className="flex h-10 cursor-not-allowed items-center gap-3 rounded-md px-3 text-[13px] text-sidebar-foreground/40"
-              title="Coming soon"
-            >
-              <PackageCheck className="size-[17px]" />
-              <span className="flex-1">Services</span>
-              <span className="text-[9px] uppercase tracking-wide">Soon</span>
-            </div>
             <div
               className="flex h-10 cursor-not-allowed items-center gap-3 rounded-md px-3 text-[13px] text-sidebar-foreground/40"
               title="Coming soon"
