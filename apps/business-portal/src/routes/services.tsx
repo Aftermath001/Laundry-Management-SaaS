@@ -207,7 +207,12 @@ export function ServicesPage() {
   async function toggleService(service: Service) {
     if (!business) return;
     const nextActive = !service.is_active;
-    if (!nextActive && !window.confirm(`Deactivate "${service.name}"? It will no longer be available for new order items.`)) {
+    if (
+      !nextActive &&
+      !window.confirm(
+        `Deactivate "${service.name}"? It will no longer be available for new order items.`,
+      )
+    ) {
       return;
     }
 
@@ -248,7 +253,9 @@ export function ServicesPage() {
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground">Total services</p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums">{loading ? "—" : services.length}</p>
+          <p className="mt-2 text-2xl font-semibold tabular-nums">
+            {loading ? "—" : services.length}
+          </p>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-xs text-muted-foreground">Active services</p>
@@ -256,7 +263,9 @@ export function ServicesPage() {
         </div>
         <div className="col-span-2 rounded-lg border border-border bg-card p-4 sm:col-span-1">
           <p className="text-xs text-muted-foreground">Inactive services</p>
-          <p className="mt-2 text-2xl font-semibold tabular-nums">{loading ? "—" : services.length - activeCount}</p>
+          <p className="mt-2 text-2xl font-semibold tabular-nums">
+            {loading ? "—" : services.length - activeCount}
+          </p>
         </div>
       </div>
 
@@ -264,7 +273,9 @@ export function ServicesPage() {
         <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div>
             <h2 className="text-sm font-semibold">All services</h2>
-            <p className="mt-1 text-xs text-muted-foreground">{filteredServices.length} services in this view</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {filteredServices.length} services in this view
+            </p>
           </div>
           <div className="flex flex-col gap-2 min-[480px]:flex-row">
             <label className="relative flex-1 min-[480px]:w-56">
@@ -296,11 +307,18 @@ export function ServicesPage() {
             Loading services...
           </div>
         ) : !business ? (
-          <EmptyState title="No business found" message="Your account is not linked to an active business." />
+          <EmptyState
+            title="No business found"
+            message="Your account is not linked to an active business."
+          />
         ) : filteredServices.length === 0 ? (
           <EmptyState
             title={services.length === 0 ? "No services yet" : "No matching services"}
-            message={services.length === 0 ? "Add your first laundry service to start building your price list." : "Try another service name or filter."}
+            message={
+              services.length === 0
+                ? "Add your first laundry service to start building your price list."
+                : "Try another service name or filter."
+            }
           />
         ) : (
           <div className="overflow-x-auto">
@@ -316,7 +334,10 @@ export function ServicesPage() {
               </thead>
               <tbody>
                 {filteredServices.map((service) => (
-                  <tr key={service.id} className="border-b border-border last:border-0 hover:bg-muted/30">
+                  <tr
+                    key={service.id}
+                    className="border-b border-border last:border-0 hover:bg-muted/30"
+                  >
                     <td className="px-5 py-4">
                       <div className="flex items-start gap-3">
                         <span className="grid size-9 shrink-0 place-items-center rounded-md bg-secondary text-primary">
@@ -324,28 +345,44 @@ export function ServicesPage() {
                         </span>
                         <div className="min-w-0">
                           <p className="text-xs font-semibold">{service.name}</p>
-                          <p className="mt-1 max-w-md text-[11px] text-muted-foreground">{service.description || "No description provided"}</p>
+                          <p className="mt-1 max-w-md text-[11px] text-muted-foreground">
+                            {service.description || "No description provided"}
+                          </p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-3 py-4 text-xs capitalize text-muted-foreground">{unitLabels[service.unit]}</td>
-                    <td className="px-3 py-4 text-right text-xs font-semibold tabular-nums">{currency.format(service.unit_price)}</td>
+                    <td className="px-3 py-4 text-xs capitalize text-muted-foreground">
+                      {unitLabels[service.unit]}
+                    </td>
+                    <td className="px-3 py-4 text-right text-xs font-semibold tabular-nums">
+                      {currency.format(service.unit_price)}
+                    </td>
                     <td className="px-3 py-4">
-                      <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${service.is_active ? "text-success" : "text-muted-foreground"}`}>
-                        <span className={`size-1.5 rounded-full ${service.is_active ? "bg-success" : "bg-muted-foreground"}`} />
+                      <span
+                        className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${service.is_active ? "text-success" : "text-muted-foreground"}`}
+                      >
+                        <span
+                          className={`size-1.5 rounded-full ${service.is_active ? "bg-success" : "bg-muted-foreground"}`}
+                        />
                         {service.is_active ? "Active" : "Inactive"}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-right">
                       <div className="inline-flex items-center gap-1">
-                        <Button variant="outline" size="sm" onClick={() => openEditDialog(service)}>Edit</Button>
+                        <Button variant="outline" size="sm" onClick={() => openEditDialog(service)}>
+                          Edit
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => void toggleService(service)}
                           className="gap-1.5 text-muted-foreground"
                         >
-                          {service.is_active ? <ToggleRight className="size-4" /> : <ToggleLeft className="size-4" />}
+                          {service.is_active ? (
+                            <ToggleRight className="size-4" />
+                          ) : (
+                            <ToggleLeft className="size-4" />
+                          )}
                           {service.is_active ? "Deactivate" : "Activate"}
                         </Button>
                       </div>
@@ -363,17 +400,32 @@ export function ServicesPage() {
           <DialogHeader>
             <DialogTitle>{editing ? "Edit service" : "Add a service"}</DialogTitle>
             <DialogDescription>
-              {editing ? "Update the service details and pricing." : "Add a service to your business price list."}
+              {editing
+                ? "Update the service details and pricing."
+                : "Add a service to your business price list."}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={saveService} className="space-y-4">
             <label className="block space-y-1.5 text-xs font-medium">
               Service name
-              <Input required minLength={2} maxLength={100} value={form.name} onChange={(event) => updateForm("name", event.target.value)} placeholder="e.g. Wash & Fold" />
+              <Input
+                required
+                minLength={2}
+                maxLength={100}
+                value={form.name}
+                onChange={(event) => updateForm("name", event.target.value)}
+                placeholder="e.g. Wash & Fold"
+              />
             </label>
             <label className="block space-y-1.5 text-xs font-medium">
               Description
-              <Textarea maxLength={500} rows={3} value={form.description} onChange={(event) => updateForm("description", event.target.value)} placeholder="Describe what this service includes" />
+              <Textarea
+                maxLength={500}
+                rows={3}
+                value={form.description}
+                onChange={(event) => updateForm("description", event.target.value)}
+                placeholder="Describe what this service includes"
+              />
             </label>
             <div className="grid grid-cols-2 gap-3">
               <label className="block space-y-1.5 text-xs font-medium">
@@ -391,11 +443,26 @@ export function ServicesPage() {
               </label>
               <label className="block space-y-1.5 text-xs font-medium">
                 Price (KES)
-                <Input required min="0" step="0.01" type="number" value={form.unit_price} onChange={(event) => updateForm("unit_price", event.target.value)} placeholder="150" />
+                <Input
+                  required
+                  min="0"
+                  step="0.01"
+                  type="number"
+                  value={form.unit_price}
+                  onChange={(event) => updateForm("unit_price", event.target.value)}
+                  placeholder="150"
+                />
               </label>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Cancel</Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+                disabled={saving}
+              >
+                Cancel
+              </Button>
               <Button type="submit" disabled={saving}>
                 {saving && <Loader2 className="size-4 animate-spin" />}
                 {editing ? "Save changes" : "Add service"}

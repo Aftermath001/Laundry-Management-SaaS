@@ -108,7 +108,9 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
 
         if (inviteToken) {
           await apiClient.post("/v1/invitations/accept", { token: inviteToken });
-          toast.success("Signed in successfully", { description: "Your invitation has been accepted." });
+          toast.success("Signed in successfully", {
+            description: "Your invitation has been accepted.",
+          });
           await navigate({ to: "/" });
           return;
         }
@@ -164,10 +166,14 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
 
         if (inviteToken) {
           await apiClient.post("/v1/invitations/accept", { token: inviteToken });
-          toast.success("Registration successful", { description: "Your invitation has been accepted." });
+          toast.success("Registration successful", {
+            description: "Your invitation has been accepted.",
+          });
           await navigate({ to: "/" });
         } else {
-          toast.success("Registration successful", { description: "Your account is ready. Set up your business to continue." });
+          toast.success("Registration successful", {
+            description: "Your account is ready. Set up your business to continue.",
+          });
           await navigate({ to: "/onboarding" });
         }
         return;
@@ -222,12 +228,20 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
         await navigate({ to: "/" });
       }
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : "Something went wrong. Please try again.";
+      const message =
+        caught instanceof Error ? caught.message : "Something went wrong. Please try again.";
       setError(message);
-      toast.error(mode === "login" ? "Login failed" : mode === "register" ? "Registration failed" : "Request failed", {
-        description: message,
-        duration: 7000,
-      });
+      toast.error(
+        mode === "login"
+          ? "Login failed"
+          : mode === "register"
+            ? "Registration failed"
+            : "Request failed",
+        {
+          description: message,
+          duration: 7000,
+        },
+      );
     } finally {
       setLoading(false);
     }
@@ -263,7 +277,8 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
                 <>
                   {inviteToken && (
                     <div className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs leading-5">
-                      You have been invited to join a LaundryFlow business. Create your account with the invited email address.
+                      You have been invited to join a LaundryFlow business. Create your account with
+                      the invited email address.
                     </div>
                   )}
                   <label className="block space-y-1.5 text-xs font-medium">
@@ -276,15 +291,17 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
                       placeholder="Your full name"
                     />
                   </label>
-                  {!inviteToken && <label className="block space-y-1.5 text-xs font-medium">
-                    Business name
-                    <Input
-                      required
-                      value={businessName}
-                      onChange={(event) => setBusinessName(event.target.value)}
-                      placeholder="Your laundry business"
-                    />
-                  </label>}
+                  {!inviteToken && (
+                    <label className="block space-y-1.5 text-xs font-medium">
+                      Business name
+                      <Input
+                        required
+                        value={businessName}
+                        onChange={(event) => setBusinessName(event.target.value)}
+                        placeholder="Your laundry business"
+                      />
+                    </label>
+                  )}
                 </>
               )}
               {(mode === "login" || mode === "register" || mode === "forgot") && (
@@ -388,7 +405,9 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
                 <>
                   Already have an account?{" "}
                   <a
-                    href={inviteToken ? `/login?invite=${encodeURIComponent(inviteToken)}` : "/login"}
+                    href={
+                      inviteToken ? `/login?invite=${encodeURIComponent(inviteToken)}` : "/login"
+                    }
                     className="font-semibold text-primary hover:underline"
                   >
                     Sign in

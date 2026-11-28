@@ -66,11 +66,16 @@ export function EmployeesPage() {
         );
         if (active) setBranches(branchResponse.branches ?? []);
       } catch (error) {
-        if (active) toast.error(error instanceof Error ? error.message : "Unable to load invitation details.");
+        if (active)
+          toast.error(
+            error instanceof Error ? error.message : "Unable to load invitation details.",
+          );
       }
     }
     void loadInvitationContext();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   async function inviteEmployee(event: FormEvent<HTMLFormElement>) {
@@ -79,8 +84,8 @@ export function EmployeesPage() {
       toast.error("Complete the invitation details first.");
       return;
     }
-    const apiRole = role === "Business Administrator" ? "admin"
-      : role === "Branch Manager" ? "manager" : "staff";
+    const apiRole =
+      role === "Business Administrator" ? "admin" : role === "Branch Manager" ? "manager" : "staff";
     if (apiRole !== "admin" && !branch) {
       toast.error("Select a branch for this team member.");
       return;
@@ -197,9 +202,11 @@ export function EmployeesPage() {
                 className="h-9 w-full appearance-none rounded-md border border-input bg-background pl-3 pr-8 text-xs outline-none focus:ring-2 focus:ring-ring min-[480px]:w-48"
               >
                 <option>All roles</option>
-                {EMPLOYEE_ROLES.filter((employeeRole) => employeeRole !== "Business Owner").map((employeeRole) => (
-                  <option key={employeeRole}>{employeeRole}</option>
-                ))}
+                {EMPLOYEE_ROLES.filter((employeeRole) => employeeRole !== "Business Owner").map(
+                  (employeeRole) => (
+                    <option key={employeeRole}>{employeeRole}</option>
+                  ),
+                )}
               </select>
               <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
             </label>
@@ -308,7 +315,8 @@ export function EmployeesPage() {
           <DialogHeader>
             <DialogTitle>Invite a team member</DialogTitle>
             <DialogDescription>
-              Create a secure invitation link. The recipient must register using the invited email address.
+              Create a secure invitation link. The recipient must register using the invited email
+              address.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={inviteEmployee} className="space-y-4">
@@ -338,25 +346,31 @@ export function EmployeesPage() {
                 onChange={(event) => setRole(event.target.value as (typeof EMPLOYEE_ROLES)[number])}
                 className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
               >
-                {EMPLOYEE_ROLES.filter((employeeRole) => employeeRole !== "Business Owner").map((employeeRole) => (
-                  <option key={employeeRole}>{employeeRole}</option>
-                ))}
+                {EMPLOYEE_ROLES.filter((employeeRole) => employeeRole !== "Business Owner").map(
+                  (employeeRole) => (
+                    <option key={employeeRole}>{employeeRole}</option>
+                  ),
+                )}
               </select>
             </label>
-            {role !== "Business Administrator" && <label className="block space-y-1.5 text-xs font-medium">
-              Branch
-              <select
-                required
-                value={branch}
-                onChange={(event) => setBranch(event.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">Select a branch</option>
-                {branches.map((branchOption) => (
-                  <option key={branchOption.id} value={branchOption.id}>{branchOption.name}</option>
-                ))}
-              </select>
-            </label>}
+            {role !== "Business Administrator" && (
+              <label className="block space-y-1.5 text-xs font-medium">
+                Branch
+                <select
+                  required
+                  value={branch}
+                  onChange={(event) => setBranch(event.target.value)}
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Select a branch</option>
+                  {branches.map((branchOption) => (
+                    <option key={branchOption.id} value={branchOption.id}>
+                      {branchOption.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
